@@ -151,7 +151,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         .map((item) => item.title)
         .filter((value) => value.length > 0);
 
-      const count = 3;
+      const count = 6;
       setPendingNodeId(parent.id);
       try {
         const response = await expandNodeAction({

@@ -13,7 +13,7 @@ const ExpandInputSchema = z.object({
   rootTopic: z.string(),
   topicDescription: z.string(),
   pathContext: z.array(z.string()),
-  count: z.number().min(1).max(6)
+  count: z.number().min(1).max(10)
 });
 
 const ExpandOutputSchema = z.object({
@@ -43,19 +43,20 @@ const expandNodePrompt = ({
 }: z.infer<typeof ExpandInputSchema>) => {
   const path = pathContext.join(" > ");
   return [
-    "You are a recursive mind map generator.",
-    `Root topic: ${rootTopic}`,
-    `Topic constraints: ${topicDescription || "None"}`,
-    `Path: ${path}`,
-    `Generate ${count} distinct, concise subtopics for the last path item.`,
-    "Return JSON with array 'expansions', each with title and description."
+    "你是一名思维导图扩展助手，必须使用中文回复。",
+    `根主题: ${rootTopic}`,
+    `主题约束: ${topicDescription || "无"}`,
+    `路径: ${path}`,
+    `生成不少于3个且不超过${count}个相关子主题，相关性强的可以多给。`,
+    "只返回 JSON，包含字段 expansions，每项包含 title 和 description（中文）。"
   ].join("\n");
 };
+
 
 export async function expandNodeAction(input: z.infer<typeof ExpandInputSchema>) {
   const parsed = ExpandInputSchema.parse(input);
   const prompt = expandNodePrompt(parsed);
-    const response = await ai.generate({
+  const response = await ai.generate({
     model: modelRefName,
     prompt,
     output: { schema: ExpandOutputSchema },

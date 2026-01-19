@@ -28,10 +28,10 @@ const ai = genkit({
 
 const analyzePrompt = ({ rootTopic }: z.infer<typeof AnalyzeInputSchema>) => {
   return [
-    "You are an assistant that scopes and constrains a mind map topic.",
-    `Topic: ${rootTopic}`,
-    "Return a concise constraint statement (1-2 sentences) that narrows the domain and avoids ambiguity.",
-    "Output JSON with field 'constraints'."
+    "你是一名主题范围分析助手，必须使用中文回复。",
+    `主题: ${rootTopic}`,
+    "输出1-2句中文约束说明，用于限定主题范围，避免歧义。",
+    "只返回 JSON，包含字段 constraints。"
   ].join("\n");
 };
 
