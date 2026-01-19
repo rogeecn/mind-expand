@@ -304,6 +304,25 @@ export function MapCanvas({ topicId }: { topicId: string }) {
       const target = nodes.find((node) => node.id === nodeId);
       if (!target || target.parentId === null) return;
 
+      // Determine next node to select
+      let nextSelectedId: string | null = null;
+      if (target.parentId) {
+        const siblings = nodes
+          .filter((n) => n.parentId === target.parentId)
+          .sort((a, b) => a.y - b.y);
+        const index = siblings.findIndex((n) => n.id === nodeId);
+
+        if (index !== -1) {
+          if (index + 1 < siblings.length) {
+            nextSelectedId = siblings[index + 1].id;
+          } else if (index - 1 >= 0) {
+            nextSelectedId = siblings[index - 1].id;
+          } else {
+            nextSelectedId = target.parentId;
+          }
+        }
+      }
+
       const targets = new Set<string>();
       const queue = [nodeId];
 
@@ -328,6 +347,10 @@ export function MapCanvas({ topicId }: { topicId: string }) {
           await db.edges.bulkDelete(edgeIds);
         }
       });
+
+      if (nextSelectedId) {
+        setSelectedNodeId(nextSelectedId);
+      }
     },
     [nodes, edges]
   );
