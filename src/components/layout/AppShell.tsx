@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { TopicSidebar } from "@/components/layout/TopicSidebar";
 import { TopicForm, type TopicFormValues } from "@/components/layout/TopicForm";
+import { TopicSidebar } from "@/components/layout/TopicSidebar";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { useTopic } from "@/hooks/useTopic";
-import { db } from "@/lib/db";
 import type { NodeRecord } from "@/lib/db";
+import { db } from "@/lib/db";
 import { createId } from "@/lib/uuid";
+import { PanelLeftOpen } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 export type AppShellMode = "create" | "view";
 
@@ -22,6 +23,7 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
   const [activeTopicId, setActiveTopicId] = useState<string | null>(topicId);
   const [isCreating, setIsCreating] = useState(mode === "create");
   const [isReady, setIsReady] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { createTopic, topic } = useTopic(activeTopicId);
 
   useEffect(() => {
@@ -106,8 +108,19 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
         activeTopicId={activeTopicId}
         onSelectTopic={handleSelectTopic}
         onCreateTopic={handleCreateTopic}
+        isOpen={isSidebarOpen}
+        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
       />
       <main className="relative flex-1 overflow-hidden">
+        {!isSidebarOpen && (
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="absolute left-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:border-black hover:text-black"
+            title="Open sidebar"
+          >
+            <PanelLeftOpen className="h-4 w-4" />
+          </button>
+        )}
         <div className="flex h-full justify-center">
           {rightContent}
         </div>

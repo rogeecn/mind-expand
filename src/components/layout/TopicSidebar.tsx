@@ -1,38 +1,64 @@
 "use client";
 
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, type TopicRecord } from "@/lib/db";
+import { db } from "@/lib/db";
 import clsx from "clsx";
-import { Plus } from "lucide-react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { PanelLeftClose, Plus } from "lucide-react";
 
 type SidebarProps = {
   activeTopicId: string | null;
   onSelectTopic: (topicId: string) => void;
   onCreateTopic: () => void;
+  isOpen: boolean;
+  onToggle: () => void;
 };
 
-export function TopicSidebar({ activeTopicId, onSelectTopic, onCreateTopic }: SidebarProps) {
+export function TopicSidebar({
+  activeTopicId,
+  onSelectTopic,
+  onCreateTopic,
+  isOpen,
+  onToggle
+}: SidebarProps) {
   const topics = useLiveQuery(async () => {
     return db.topics.orderBy("updatedAt").reverse().toArray();
   }, []);
 
   return (
-    <aside className="flex h-screen w-72 flex-col border-r border-gray-100 bg-white">
-      <div className="flex items-center justify-between px-5 pb-4 pt-6">
+    <aside
+      className={clsx(
+        "flex h-screen flex-col border-r border-gray-100 bg-white transition-all duration-300 ease-in-out",
+        isOpen ? "w-72 translate-x-0" : "w-0 -translate-x-full overflow-hidden opacity-0"
+      )}
+    >
+      <div className="flex items-center justify-between px-5 pt-6 pb-4 min-w-72">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.4em] text-gray-500">Topics</p>
-          <h1 className="mt-2 font-serif text-2xl font-semibold text-ink">Mind Expand</h1>
+          <h1 className="font-serif text-2xl font-semibold text-ink">Mind Expand</h1>
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggle}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:border-black hover:text-black"
+            title="Collapse sidebar"
+          >
+            <PanelLeftClose className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="px-4 pb-4 min-w-72">
         <button
-          type="button"
           onClick={onCreateTopic}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:border-black hover:text-black"
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-ink shadow-sm transition-all hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98]"
         >
           <Plus className="h-4 w-4" />
+          <span>New Topic</span>
         </button>
       </div>
+
       <div className="mx-5 h-px bg-gray-200" />
-      <div className="flex-1 overflow-y-auto px-4 py-5">
+      <div className="flex-1 overflow-y-auto px-4 py-5 min-w-72">
         {topics?.length ? (
           <div className="space-y-1">
             {topics.map((topic) => (
