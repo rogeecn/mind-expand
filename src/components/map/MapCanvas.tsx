@@ -17,7 +17,7 @@ import { CompactNode } from "@/components/map/CompactNode";
 import { MapToolbar } from "@/components/map/MapToolbar";
 import { useMapData } from "@/hooks/useMapData";
 import { useTopic } from "@/hooks/useTopic";
-import type { EdgeRecord, NodeRecord, TopicStyle } from "@/lib/db";
+import { db, type EdgeRecord, type NodeRecord, type TopicStyle } from "@/lib/db";
 import { calculateChildPositions } from "@/lib/layout";
 import { downloadExport, importExportFile } from "@/components/map/ImportExport";
 import { importPayload, validatePayload } from "@/hooks/useImportExport";
@@ -37,7 +37,9 @@ const defaultStyle: TopicStyle = {
 function mapNodeToFlow(
   node: NodeRecord,
   pendingId: string | null,
-  onExpand: (nodeId: string) => void
+  onExpand: (nodeId: string) => void,
+  onDelete: (nodeId: string) => void,
+  hasChildren: boolean
 ) {
   return {
     id: node.id,
@@ -47,7 +49,9 @@ function mapNodeToFlow(
       title: node.title,
       description: node.description,
       isLoading: node.id === pendingId,
-      onExpand: () => onExpand(node.id)
+      hasChildren,
+      onExpand: () => onExpand(node.id),
+      onDelete: () => onDelete(node.id)
     }
   } satisfies Node;
 }
@@ -178,9 +182,49 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     [nodes, topic, styleConfig.edgeStyle, styleConfig.nodeStyle, addNodes, addEdges]
   );
 
+  const handleDeleteNode = useCallback(
+    async (nodeId: string) => {
+      const targets = new Set<string>();
+      const queue = [nodeId];
+
+      while (queue.length) {
+        const current = queue.shift();
+        if (!current || targets.has(current)) continue;
+        targets.add(current);
+        nodes
+          .filter((item) => item.parentId === current)
+          .forEach((child) => queue.push(child.id));
+      }
+
+      if (targets.size === 0) return;
+
+      const edgeIds = edges
+        .filter((edge) => targets.has(edge.source) || targets.has(edge.target))
+        .map((edge) => edge.id);
+
+      await db.transaction("rw", db.nodes, db.edges, async () => {
+        await db.nodes.bulkDelete(Array.from(targets));
+        if (edgeIds.length) {
+          await db.edges.bulkDelete(edgeIds);
+        }
+      });
+    },
+    [nodes, edges]
+  );
+
   const flowNodes = useMemo(
-    () => nodes.map((node) => mapNodeToFlow(node, pendingNodeId, handleExpandNode)),
-    [nodes, pendingNodeId, handleExpandNode]
+    () =>
+      nodes.map((node) => {
+        const hasChildren = nodes.some((item) => item.parentId === node.id);
+        return mapNodeToFlow(
+          node,
+          pendingNodeId,
+          handleExpandNode,
+          handleDeleteNode,
+          hasChildren
+        );
+      }),
+    [nodes, pendingNodeId, handleExpandNode, handleDeleteNode]
   );
 
   return (
