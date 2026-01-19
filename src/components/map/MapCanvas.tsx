@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactFlow, {
   Background,
   ConnectionLineType,
@@ -107,6 +107,40 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     }
     return { visibleNodeIds: visible, visibleNodes: resultNodes };
   }, [nodes]);
+
+  const prevVisibleIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const prevIds = prevVisibleIdsRef.current;
+
+    // Check if the set of visible nodes has changed
+    let hasChanged = prevIds.size !== visibleNodeIds.size;
+    if (!hasChanged) {
+      for (const id of visibleNodeIds) {
+        if (!prevIds.has(id)) {
+          hasChanged = true;
+          break;
+        }
+      }
+    }
+
+    if (hasChanged) {
+      const layout = layoutWithD3Tree(visibleNodes);
+
+      const meaningfulUpdates = layout.filter(p => {
+        const node = visibleNodes.find(n => n.id === p.id);
+        if (!node) return false;
+        // Only update if position changed significantly (>1px) to avoid loops/noise
+        return Math.abs(node.x - p.x) > 1 || Math.abs(node.y - p.y) > 1;
+      });
+
+      if (meaningfulUpdates.length > 0) {
+        updateNodePositions(meaningfulUpdates);
+      }
+
+      prevVisibleIdsRef.current = visibleNodeIds;
+    }
+  }, [visibleNodeIds, visibleNodes, updateNodePositions]);
 
   const flowEdges = useMemo(() =>
     edges
