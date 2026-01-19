@@ -19,7 +19,7 @@ import { NYTNode } from "@/components/map/NYTNode";
 import { useMapData } from "@/hooks/useMapData";
 import { useTopic } from "@/hooks/useTopic";
 import { db, type EdgeRecord, type NodeRecord, type TopicStyle } from "@/lib/db";
-import { calculateChildPositions, layoutWithD3Tree } from "@/lib/layout";
+import { layoutWithD3Tree } from "@/lib/layout";
 
 import { expandNodeAction } from "@/app/actions/expand-node";
 import { downloadExport, importExportFile } from "@/components/map/ImportExport";
@@ -139,15 +139,15 @@ export function MapCanvas({ topicId }: { topicId: string }) {
 
         });
 
-        const positions = calculateChildPositions(parent, existingChildren, response.nodes.length);
-        const newNodes: NodeRecord[] = response.nodes.map((nodeTitle, index) => ({
+        // 1. Create new nodes with temporary positions
+        const newNodes: NodeRecord[] = response.nodes.map((nodeTitle) => ({
           id: createId(),
           topicId: topic.id,
           parentId: parent.id,
           title: nodeTitle,
           description: response.insight ?? "",
-          x: positions[index]?.x ?? parent.x + 280,
-          y: positions[index]?.y ?? parent.y,
+          x: 0,
+          y: 0,
           nodeStyle: styleConfig.nodeStyle,
           colorTag: null,
           createdAt: Date.now()
@@ -162,10 +162,39 @@ export function MapCanvas({ topicId }: { topicId: string }) {
           createdAt: Date.now()
         }));
 
+        // 2. Calculate global layout immediately with merged data
+        const allNodes = [...nodes, ...newNodes];
+        const layoutPositions = layoutWithD3Tree(allNodes);
+
+        // 3. Apply positions to new nodes
+        const positionMap = new Map(layoutPositions.map((p) => [p.id, p]));
+        newNodes.forEach((node) => {
+          const pos = positionMap.get(node.id);
+          if (pos) {
+            node.x = pos.x;
+            node.y = pos.y;
+          }
+        });
+
+        // 4. Identify existing nodes that moved
+        const existingNodesToUpdate = nodes
+          .filter((n) => positionMap.has(n.id))
+          .map((n) => {
+            const pos = positionMap.get(n.id)!;
+            if (Math.abs(n.x - pos.x) > 0.1 || Math.abs(n.y - pos.y) > 0.1) {
+              return { ...n, x: pos.x, y: pos.y };
+            }
+            return null;
+          })
+          .filter((n): n is NodeRecord => n !== null);
+
+        // 5. Commit all changes in one transaction
         await db.transaction("rw", db.nodes, db.edges, async () => {
-          await db.nodes.bulkPut(newNodes);
+          await db.nodes.bulkPut([...newNodes, ...existingNodesToUpdate]);
           await db.edges.bulkPut(newEdges);
         });
+
+
       } finally {
         setPendingNodeIds((prev) => {
           const next = new Set(prev);
