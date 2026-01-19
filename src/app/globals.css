@@ -41,3 +41,30 @@ a {
 .react-flow__handle {
   cursor: default !important;
 }
+
+@keyframes node-breathe {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.node-loading {
+  overflow: hidden;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25), 0 0 18px rgba(245, 158, 11, 0.45);
+}
+
+.node-loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(245, 158, 11, 0.2);
+  opacity: 0.12;
+  animation: node-breathe 1.6s ease-in-out infinite;
+  pointer-events: none;
+}

@@ -33,7 +33,7 @@ export function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
         data.colorTag === "amber" && "bg-amber-100",
         data.colorTag === "sky" && "bg-sky-100",
         data.colorTag === "mint" && "bg-emerald-100",
-        data.isLoading && "animate-pulse"
+        data.isLoading && "node-loading"
       )}
     >
       <Handle
