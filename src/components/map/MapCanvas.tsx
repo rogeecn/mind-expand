@@ -198,8 +198,8 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         return;
       }
 
-      // If already expanded and has children, do nothing (selection logic handles child selection separate)
-      if (existingChildren.length > 0) return;
+      // Removed check for existing children to allow appending logic via Enter key
+      // if (existingChildren.length > 0) return;
 
       const lineage: NodeRecord[] = [];
       let currentParent: NodeRecord | undefined = parent;
@@ -418,12 +418,6 @@ export function MapCanvas({ topicId }: { topicId: string }) {
           // Standard tree behavior: First child or visually closest.
           const middleIndex = Math.floor(sortedChildren.length / 2);
           setSelectedNodeId(sortedChildren[middleIndex]?.id || sortedChildren[0].id);
-        } else {
-          // Generate? User did NOT explicitly ask for right arrow to generate.
-          // They said "Right Arrow = Expand current node".
-          // If no children, "Expand" usually does nothing or triggers generation.
-          // Let's hook it to generate (handleExpandNode).
-          handleExpandNode(currentNode.id);
         }
       }
 
