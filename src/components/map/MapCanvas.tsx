@@ -39,6 +39,7 @@ function mapNodeToFlow(
   node: NodeRecord,
   pendingIds: Set<string>,
   onExpand: (nodeId: string) => void,
+  onToggleCollapse: (nodeId: string) => void,
   onDelete: (nodeId: string) => void,
   onSelect: (nodeId: string) => void,
   hasChildren: boolean
@@ -52,7 +53,11 @@ function mapNodeToFlow(
       description: node.description,
       isLoading: pendingIds.has(node.id),
       hasChildren,
+      isCollapsed: node.isCollapsed,
+      isRoot: node.parentId === null,
+      colorTag: node.colorTag ?? null,
       onExpand: () => onExpand(node.id),
+      onToggleCollapse: () => onToggleCollapse(node.id),
       onDelete: () => onDelete(node.id),
       onSelect: () => onSelect(node.id)
     }
@@ -83,7 +88,29 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   } | null>(null);
   const [pendingNodeIds, setPendingNodeIds] = useState<Set<string>>(new Set());
 
-  const flowEdges = useMemo(() => edges.map(mapEdgeToFlow), [edges]);
+  const visibleNodeIds = useMemo(() => {
+    const hidden = new Set<string>();
+
+    const hideDescendants = (nodeId: string) => {
+      nodes
+        .filter((item) => item.parentId === nodeId)
+        .forEach((child) => {
+          hidden.add(child.id);
+          hideDescendants(child.id);
+        });
+    };
+
+    nodes
+      .filter((node) => node.isCollapsed)
+      .forEach((node) => hideDescendants(node.id));
+
+    return new Set(nodes.filter((node) => !hidden.has(node.id)).map((node) => node.id));
+  }, [nodes]);
+
+  const flowEdges = useMemo(
+    () => edges.filter((edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)).map(mapEdgeToFlow),
+    [edges, visibleNodeIds]
+  );
 
   const styleConfig = topic?.styleConfig ?? defaultStyle;
 
@@ -123,8 +150,8 @@ export function MapCanvas({ topicId }: { topicId: string }) {
       const parent = nodes.find((item) => item.id === nodeId);
       if (!parent || !topic) return;
 
-      const existingChildren = nodes.filter((item) => item.parentId === parent.id);
-      if (existingChildren.length > 0) return;
+        const existingChildren = nodes.filter((item) => item.parentId === parent.id);
+
 
       const lineage: NodeRecord[] = [];
       let currentParent: NodeRecord | undefined = parent;
@@ -145,6 +172,9 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         return next;
       });
       try {
+        if (parent.isCollapsed) {
+          await db.nodes.update(parent.id, { isCollapsed: false });
+        }
         const response = await expandNodeAction({
           rootTopic: topic.rootKeyword,
           topicDescription: topic.description,
@@ -162,6 +192,8 @@ export function MapCanvas({ topicId }: { topicId: string }) {
           x: positions[index]?.x ?? parent.x + 280,
           y: positions[index]?.y ?? parent.y,
           nodeStyle: styleConfig.nodeStyle,
+          colorTag: null,
+          isCollapsed: false,
           createdAt: Date.now()
         }));
 
@@ -189,6 +221,9 @@ export function MapCanvas({ topicId }: { topicId: string }) {
 
   const handleDeleteNode = useCallback(
     async (nodeId: string) => {
+      const target = nodes.find((node) => node.id === nodeId);
+      if (!target || target.parentId === null) return;
+
       const targets = new Set<string>();
       const queue = [nodeId];
 
@@ -217,27 +252,65 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     [nodes, edges]
   );
 
+  const handleToggleCollapse = useCallback(
+    async (nodeId: string) => {
+      const target = nodes.find((node) => node.id === nodeId);
+      if (!target || target.parentId === null) return;
+      await db.nodes.update(nodeId, { isCollapsed: !target.isCollapsed });
+    },
+    [nodes]
+  );
+
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [activeColorTarget, setActiveColorTarget] = useState<string | null>(null);
+  const [lastColor, setLastColor] = useState<NodeRecord["colorTag"]>(null);
 
   const flowNodes = useMemo(
     () =>
-      nodes.map((node) => {
-        const hasChildren = nodes.some((item) => item.parentId === node.id);
-        return mapNodeToFlow(
-          node,
-          pendingNodeIds,
-          handleExpandNode,
-          handleDeleteNode,
-          setSelectedNodeId,
-          hasChildren
-        );
-      }),
-    [nodes, pendingNodeIds, handleExpandNode, handleDeleteNode, setSelectedNodeId]
+      nodes
+        .filter((node) => visibleNodeIds.has(node.id))
+        .map((node) => {
+          const hasChildren = nodes.some((item) => item.parentId === node.id);
+          return mapNodeToFlow(
+            node,
+            pendingNodeIds,
+            handleExpandNode,
+            handleToggleCollapse,
+            handleDeleteNode,
+            setSelectedNodeId,
+            hasChildren
+          );
+        }),
+    [
+      nodes,
+      visibleNodeIds,
+      pendingNodeIds,
+      handleExpandNode,
+      handleToggleCollapse,
+      handleDeleteNode,
+      setSelectedNodeId
+    ]
   );
 
   const selectedNode = selectedNodeId
     ? nodes.find((node) => node.id === selectedNodeId)
     : null;
+
+  useEffect(() => {
+    setActiveColorTarget(selectedNodeId);
+  }, [selectedNodeId]);
+
+  useEffect(() => {
+    if (selectedNodeId && !visibleNodeIds.has(selectedNodeId)) {
+      setSelectedNodeId(null);
+    }
+  }, [selectedNodeId, visibleNodeIds]);
+
+  const handleSetColor = async (color: NodeRecord["colorTag"]) => {
+    if (!activeColorTarget) return;
+    await db.nodes.update(activeColorTarget, { colorTag: color });
+    setLastColor(color ?? null);
+  };
 
   useEffect(() => {
     if (!selectedNodeId) return;
@@ -273,7 +346,11 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         onLayoutTree={onLayoutTree}
         onExport={onExport}
         onImport={onImport}
+        onSetColor={handleSetColor}
+        isColorEnabled={Boolean(activeColorTarget)}
+        lastColor={lastColor}
       />
+
       {selectedNode && (
         <NodeDetailsPanel node={selectedNode} onClose={() => setSelectedNodeId(null)} />
       )}

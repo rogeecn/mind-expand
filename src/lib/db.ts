@@ -23,6 +23,8 @@ export type NodeRecord = {
   x: number;
   y: number;
   nodeStyle: TopicStyle["nodeStyle"];
+  colorTag: "ink" | "amber" | "sky" | "mint" | null;
+  isCollapsed: boolean;
   createdAt: number;
 };
 
@@ -56,6 +58,30 @@ class MindMapDatabase extends Dexie {
       return transaction.table("topics").toCollection().modify((topic) => {
         if (!topic.description) {
           topic.description = "";
+        }
+      });
+    });
+
+    this.version(3).stores({
+      topics: "id, rootKeyword, updatedAt",
+      nodes: "id, topicId, parentId",
+      edges: "id, topicId, source"
+    }).upgrade((transaction) => {
+      return transaction.table("nodes").toCollection().modify((node) => {
+        if (node.colorTag === undefined) {
+          node.colorTag = null;
+        }
+      });
+    });
+
+    this.version(4).stores({
+      topics: "id, rootKeyword, updatedAt",
+      nodes: "id, topicId, parentId",
+      edges: "id, topicId, source"
+    }).upgrade((transaction) => {
+      return transaction.table("nodes").toCollection().modify((node) => {
+        if (node.isCollapsed === undefined) {
+          node.isCollapsed = false;
         }
       });
     });
