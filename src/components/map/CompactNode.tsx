@@ -26,11 +26,12 @@ export function CompactNode({ data, selected }: NodeProps<CompactNodeData>) {
       }}
       onClick={() => data.onSelect?.()}
       className={clsx(
-        "group relative flex h-[50px] w-auto min-w-[180px] max-w-[300px] items-center justify-center rounded-full border bg-white px-5 text-center text-sm text-ink transition-all duration-300",
+        "group relative flex h-[50px] w-auto min-w-[180px] max-w-[300px] items-center justify-center rounded-full border px-5 text-center text-sm text-ink transition-all duration-300",
         selected
           ? "border-2 border-amber-500"
           : "border-gray-200 hover:border-gray-500",
         data.collapsed && "shadow-[3px_3px_0_white,4px_4px_0_#000,7px_7px_0_white,8px_8px_0_#000]",
+        !data.colorTag && "bg-white",
         data.colorTag === "ink" && "bg-ink text-white",
         data.colorTag === "amber" && "bg-amber-100",
         data.colorTag === "sky" && "bg-sky-100",

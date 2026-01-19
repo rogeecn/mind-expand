@@ -333,7 +333,6 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   );
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [activeColorTarget, setActiveColorTarget] = useState<string | null>(null);
   const [lastColor, setLastColor] = useState<NodeRecord["colorTag"]>(null);
 
   // Keyboard Navigation Handler
@@ -486,13 +485,9 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     ? nodes.find((node) => node.id === selectedNodeId)
     : null;
 
-  useEffect(() => {
-    setActiveColorTarget(selectedNodeId);
-  }, [selectedNodeId]);
-
   const handleSetColor = async (color: NodeRecord["colorTag"]) => {
-    if (!activeColorTarget) return;
-    await db.nodes.update(activeColorTarget, { colorTag: color });
+    if (!selectedNodeId) return;
+    await db.nodes.update(selectedNodeId, { colorTag: color });
     setLastColor(color ?? null);
   };
 
@@ -521,7 +516,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         onExport={onExport}
         onImport={onImport}
         onSetColor={handleSetColor}
-        isColorEnabled={Boolean(activeColorTarget)}
+        isColorEnabled={Boolean(selectedNodeId)}
         lastColor={lastColor}
       />
 
