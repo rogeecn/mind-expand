@@ -1,12 +1,12 @@
 "use server";
 
-import { z } from "zod";
-import { genkit } from "genkit";
 import openAI from "@genkit-ai/compat-oai";
+import { genkit } from "genkit";
+import { z } from "zod";
 
 const AnalyzeInputSchema = z.object({
   rootTopic: z.string(),
-  selectedSense: z.string().optional()
+  selectedSenses: z.array(z.string()).optional()
 });
 
 const AnalyzeOutputSchema = z.object({
@@ -31,13 +31,13 @@ const ai = genkit({
 
 const analyzePrompt = ({
   rootTopic,
-  selectedSense
+  selectedSenses
 }: z.infer<typeof AnalyzeInputSchema>) => {
-  if (selectedSense) {
+  if (selectedSenses && selectedSenses.length > 0) {
     return [
       "你是一名主题范围分析助手，必须使用中文回复。",
       `主题: ${rootTopic}`,
-      `已选择语义: ${selectedSense}`,
+      `已选择语义: ${selectedSenses.join(", ")}`,
       "输出1-2句中文约束说明，用于限定主题范围，避免歧义。",
       "仅返回 JSON，字段: senseOptions(数组), constraints(字符串), isAmbiguous(布尔false)。"
     ].join("\n");

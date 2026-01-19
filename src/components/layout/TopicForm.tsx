@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { analyzeTopicAction } from "@/app/actions/analyze-topic";
+import { useState } from "react";
 
 export type TopicFormValues = {
   rootKeyword: string;
@@ -12,12 +12,12 @@ type TopicFormProps = {
   onSubmit: (values: TopicFormValues) => void;
 };
 
-export function TopicForm({ onSubmit }: TopicFormProps) {
+  export function TopicForm({ onSubmit }: TopicFormProps) {
   const [rootKeyword, setRootKeyword] = useState("");
   const [description, setDescription] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [senseOptions, setSenseOptions] = useState<string[]>([]);
-  const [selectedSense, setSelectedSense] = useState<string | null>(null);
+  const [selectedSenses, setSelectedSenses] = useState<string[]>([]);
 
   const handleAnalyze = async () => {
     if (!rootKeyword.trim()) return;
@@ -26,11 +26,11 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
       const result = await analyzeTopicAction({ rootTopic: rootKeyword.trim() });
       if (result.isAmbiguous) {
         setSenseOptions(result.senseOptions);
-        setSelectedSense(null);
+        setSelectedSenses([]);
         setDescription("");
       } else {
         setSenseOptions([]);
-        setSelectedSense(null);
+        setSelectedSenses([]);
         setDescription(result.constraints ?? "");
       }
     } finally {
@@ -41,7 +41,7 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
   const handleRootChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRootKeyword(event.target.value);
     setSenseOptions([]);
-    setSelectedSense(null);
+    setSelectedSenses([]);
   };
 
   const handleDescriptionChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -93,7 +93,7 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
         {senseOptions.length > 0 && (
           <div className="space-y-3">
             <label className="text-[11px] uppercase tracking-[0.3em] text-gray-500">
-              选择语义
+              Select Scopes
             </label>
             <div className="grid gap-2">
               {senseOptions.map((option) => (
@@ -102,26 +102,38 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
                   className="flex cursor-pointer items-center gap-3 rounded-sm border border-gray-200 px-3 py-2 text-sm text-gray-600 transition hover:border-black hover:text-ink"
                 >
                   <input
-                    type="radio"
-                    name="sense"
-                    value={option}
-                    checked={selectedSense === option}
-                    onChange={async () => {
-                      setSelectedSense(option);
-                      setDescription("");
+                    type="checkbox"
+                    checked={selectedSenses.includes(option)}
+                    onChange={async (e) => {
+                      const isChecked = e.target.checked;
+                      let newSenses: string[];
+
+                      if (isChecked) {
+                        newSenses = [...selectedSenses, option];
+                      } else {
+                        newSenses = selectedSenses.filter(s => s !== option);
+                      }
+
+                      setSelectedSenses(newSenses);
+
+                      if (newSenses.length === 0) {
+                        setDescription("");
+                        return;
+                      }
+
                       setIsAnalyzing(true);
                       try {
                         const result = await analyzeTopicAction({
                           rootTopic: rootKeyword.trim(),
-                          selectedSense: option
+                          selectedSenses: newSenses
                         });
                         setDescription(result.constraints ?? "");
-                        setSenseOptions([]);
+                        // Do not clear options
                       } finally {
                         setIsAnalyzing(false);
                       }
                     }}
-                    className="h-4 w-4 border-gray-300 text-black"
+                    className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
                   />
                   <span>{option}</span>
                 </label>
