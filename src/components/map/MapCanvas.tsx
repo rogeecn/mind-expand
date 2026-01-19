@@ -6,6 +6,7 @@ import ReactFlow, {
   ConnectionLineType,
   Controls,
   MiniMap,
+  ReactFlowInstance,
   type Edge,
   type Node,
   type NodeTypes
@@ -71,9 +72,7 @@ function mapEdgeToFlow(edge: EdgeRecord) {
 export function MapCanvas({ topicId }: { topicId: string }) {
   const { topic } = useTopic(topicId);
   const { nodes, edges, updateNodePosition, updateNodePositions } = useMapData(topicId);
-  const [reactFlowInstance, setReactFlowInstance] = useState<{
-    fitView: (options?: { padding?: number; duration?: number }) => void;
-  } | null>(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [pendingNodeIds, setPendingNodeIds] = useState<Set<string>>(new Set());
 
   // Calculate visible nodes based on collapsed state
@@ -444,6 +443,31 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     window.addEventListener("keydown", handler, { capture: true });
     return () => window.removeEventListener("keydown", handler, { capture: true });
   }, [selectedNodeId, nodes, handleExpandNode, handleDeleteNode]);
+
+  const lastCenteredRef = useRef<{ id: string; x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (!selectedNodeId || !reactFlowInstance) return;
+
+    const node = visibleNodes.find((n) => n.id === selectedNodeId);
+    if (!node) return;
+
+    const flowNode = reactFlowInstance.getNode(node.id);
+    const width = flowNode?.width ?? 200;
+    const height = flowNode?.height ?? 50;
+
+    const targetX = node.x + width / 2;
+    const targetY = node.y + height / 2;
+
+    const last = lastCenteredRef.current;
+    const isNewSelection = last?.id !== node.id;
+    const moved = !last || Math.abs(last.x - targetX) > 5 || Math.abs(last.y - targetY) > 5;
+
+    if (isNewSelection || moved) {
+      reactFlowInstance.setCenter(targetX, targetY, { duration: 400, zoom: reactFlowInstance.getZoom() });
+      lastCenteredRef.current = { id: node.id, x: targetX, y: targetY };
+    }
+  }, [selectedNodeId, visibleNodes, reactFlowInstance]);
 
   const flowNodes = useMemo(
     () =>
