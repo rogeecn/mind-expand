@@ -64,7 +64,6 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
       y: 0,
       nodeStyle: newTopic.styleConfig.nodeStyle,
       colorTag: null,
-      isCollapsed: false,
       createdAt: Date.now()
     };
 

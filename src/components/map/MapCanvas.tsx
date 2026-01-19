@@ -19,11 +19,10 @@ import { NodeDetailsPanel } from "@/components/map/NodeDetailsPanel";
 import { useMapData } from "@/hooks/useMapData";
 import { useTopic } from "@/hooks/useTopic";
 import { db, type EdgeRecord, type NodeRecord, type TopicStyle } from "@/lib/db";
-import { calculateChildPositions, layoutWithD3Tree } from "@/lib/layout";
+import { layoutWithD3Tree } from "@/lib/layout";
+
 import { downloadExport, importExportFile } from "@/components/map/ImportExport";
 import { importPayload, validatePayload } from "@/hooks/useImportExport";
-import { expandNodeAction } from "@/app/actions/expand-node";
-import { createId } from "@/lib/uuid";
 
 const nodeTypes: NodeTypes = {
   nyt: NYTNode,
@@ -35,15 +34,7 @@ const defaultStyle: TopicStyle = {
   nodeStyle: "nyt"
 };
 
-function mapNodeToFlow(
-  node: NodeRecord,
-  pendingIds: Set<string>,
-  onExpand: (nodeId: string) => void,
-  onToggleCollapse: (nodeId: string) => void,
-  onDelete: (nodeId: string) => void,
-  onSelect: (nodeId: string) => void,
-  hasChildren: boolean
-) {
+function mapNodeToFlow(node: NodeRecord, onSelect: (nodeId: string) => void) {
   return {
     id: node.id,
     type: node.nodeStyle,
@@ -51,14 +42,8 @@ function mapNodeToFlow(
     data: {
       title: node.title,
       description: node.description,
-      isLoading: pendingIds.has(node.id),
-      hasChildren,
-      isCollapsed: node.isCollapsed,
       isRoot: node.parentId === null,
       colorTag: node.colorTag ?? null,
-      onExpand: () => onExpand(node.id),
-      onToggleCollapse: () => onToggleCollapse(node.id),
-      onDelete: () => onDelete(node.id),
       onSelect: () => onSelect(node.id)
     }
   } satisfies Node;
@@ -75,42 +60,12 @@ function mapEdgeToFlow(edge: EdgeRecord) {
 
 export function MapCanvas({ topicId }: { topicId: string }) {
   const { topic } = useTopic(topicId);
-  const {
-    nodes,
-    edges,
-    updateNodePosition,
-    updateNodePositions,
-    addNodes,
-    addEdges
-  } = useMapData(topicId);
+  const { nodes, edges, updateNodePosition, updateNodePositions } = useMapData(topicId);
   const [reactFlowInstance, setReactFlowInstance] = useState<{
     fitView: (options?: { padding?: number; duration?: number }) => void;
   } | null>(null);
-  const [pendingNodeIds, setPendingNodeIds] = useState<Set<string>>(new Set());
 
-  const visibleNodeIds = useMemo(() => {
-    const hidden = new Set<string>();
-
-    const hideDescendants = (nodeId: string) => {
-      nodes
-        .filter((item) => item.parentId === nodeId)
-        .forEach((child) => {
-          hidden.add(child.id);
-          hideDescendants(child.id);
-        });
-    };
-
-    nodes
-      .filter((node) => node.isCollapsed)
-      .forEach((node) => hideDescendants(node.id));
-
-    return new Set(nodes.filter((node) => !hidden.has(node.id)).map((node) => node.id));
-  }, [nodes]);
-
-  const flowEdges = useMemo(
-    () => edges.filter((edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)).map(mapEdgeToFlow),
-    [edges, visibleNodeIds]
-  );
+  const flowEdges = useMemo(() => edges.map(mapEdgeToFlow), [edges]);
 
   const styleConfig = topic?.styleConfig ?? defaultStyle;
 
@@ -143,82 +98,6 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     if (layout.length === 0) return;
     await updateNodePositions(layout);
   }, [nodes, updateNodePositions]);
-
-  const handleExpandNode = useCallback(
-    async (nodeId: string) => {
-      if (pendingNodeIds.has(nodeId)) return;
-      const parent = nodes.find((item) => item.id === nodeId);
-      if (!parent || !topic) return;
-
-        const existingChildren = nodes.filter((item) => item.parentId === parent.id);
-
-
-      const lineage: NodeRecord[] = [];
-      let currentParent: NodeRecord | undefined = parent;
-      while (currentParent) {
-        lineage.push(currentParent);
-        if (!currentParent.parentId) break;
-        currentParent = nodes.find((item) => item.id === currentParent?.parentId);
-      }
-      const pathContext = lineage
-        .reverse()
-        .map((item) => item.title)
-        .filter((value) => value.length > 0);
-
-      const count = 6;
-      setPendingNodeIds((prev) => {
-        const next = new Set(prev);
-        next.add(parent.id);
-        return next;
-      });
-      try {
-        if (parent.isCollapsed) {
-          await db.nodes.update(parent.id, { isCollapsed: false });
-        }
-        const response = await expandNodeAction({
-          rootTopic: topic.rootKeyword,
-          topicDescription: topic.description,
-          pathContext,
-          count
-        });
-
-        const positions = calculateChildPositions(parent, existingChildren, response.expansions.length);
-        const newNodes: NodeRecord[] = response.expansions.map((expansion, index) => ({
-          id: createId(),
-          topicId: topic.id,
-          parentId: parent.id,
-          title: expansion.title,
-          description: expansion.description,
-          x: positions[index]?.x ?? parent.x + 280,
-          y: positions[index]?.y ?? parent.y,
-          nodeStyle: styleConfig.nodeStyle,
-          colorTag: null,
-          isCollapsed: false,
-          createdAt: Date.now()
-        }));
-
-        const newEdges: EdgeRecord[] = newNodes.map((child) => ({
-          id: createId(),
-          topicId: topic.id,
-          source: parent.id,
-          target: child.id,
-          edgeStyle: styleConfig.edgeStyle,
-          createdAt: Date.now()
-        }));
-
-        await addNodes(newNodes);
-        await addEdges(newEdges);
-      } finally {
-        setPendingNodeIds((prev) => {
-          const next = new Set(prev);
-          next.delete(parent.id);
-          return next;
-        });
-      }
-    },
-    [nodes, topic, styleConfig.edgeStyle, styleConfig.nodeStyle, addNodes, addEdges, pendingNodeIds]
-  );
-
   const handleDeleteNode = useCallback(
     async (nodeId: string) => {
       const target = nodes.find((node) => node.id === nodeId);
@@ -252,44 +131,27 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     [nodes, edges]
   );
 
-  const handleToggleCollapse = useCallback(
-    async (nodeId: string) => {
-      const target = nodes.find((node) => node.id === nodeId);
-      if (!target || target.parentId === null) return;
-      await db.nodes.update(nodeId, { isCollapsed: !target.isCollapsed });
-    },
-    [nodes]
-  );
-
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [activeColorTarget, setActiveColorTarget] = useState<string | null>(null);
   const [lastColor, setLastColor] = useState<NodeRecord["colorTag"]>(null);
 
+  useEffect(() => {
+    if (!selectedNodeId) return;
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === "Delete" || event.key === "Backspace") {
+        handleDeleteNode(selectedNodeId);
+      }
+      if (event.key === "Escape") {
+        setSelectedNodeId(null);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [selectedNodeId, handleDeleteNode]);
+
   const flowNodes = useMemo(
-    () =>
-      nodes
-        .filter((node) => visibleNodeIds.has(node.id))
-        .map((node) => {
-          const hasChildren = nodes.some((item) => item.parentId === node.id);
-          return mapNodeToFlow(
-            node,
-            pendingNodeIds,
-            handleExpandNode,
-            handleToggleCollapse,
-            handleDeleteNode,
-            setSelectedNodeId,
-            hasChildren
-          );
-        }),
-    [
-      nodes,
-      visibleNodeIds,
-      pendingNodeIds,
-      handleExpandNode,
-      handleToggleCollapse,
-      handleDeleteNode,
-      setSelectedNodeId
-    ]
+    () => nodes.map((node) => mapNodeToFlow(node, setSelectedNodeId)),
+    [nodes, setSelectedNodeId]
   );
 
   const selectedNode = selectedNodeId
@@ -300,28 +162,12 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     setActiveColorTarget(selectedNodeId);
   }, [selectedNodeId]);
 
-  useEffect(() => {
-    if (selectedNodeId && !visibleNodeIds.has(selectedNodeId)) {
-      setSelectedNodeId(null);
-    }
-  }, [selectedNodeId, visibleNodeIds]);
 
   const handleSetColor = async (color: NodeRecord["colorTag"]) => {
     if (!activeColorTarget) return;
     await db.nodes.update(activeColorTarget, { colorTag: color });
     setLastColor(color ?? null);
   };
-
-  useEffect(() => {
-    if (!selectedNodeId) return;
-    const handler = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setSelectedNodeId(null);
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [selectedNodeId]);
 
   return (
     <div className="relative h-full w-full bg-paper">
