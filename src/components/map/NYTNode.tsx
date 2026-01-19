@@ -10,6 +10,7 @@ export type NYTNodeData = {
   colorTag?: "ink" | "amber" | "sky" | "mint" | null;
   isLoading?: boolean;
   onSelect?: () => void;
+  collapsed?: boolean;
 };
 
 export function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
@@ -25,10 +26,12 @@ export function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
       }}
       onClick={() => data.onSelect?.()}
       className={clsx(
-        "group relative flex h-[50px] w-auto min-w-[220px] max-w-[360px] items-center justify-center rounded-full border bg-white px-6 text-center text-ink shadow-sm transition",
+        "group relative flex h-[50px] w-auto min-w-[220px] max-w-[360px] items-center justify-center rounded-full border bg-white px-6 text-center text-ink transition-all duration-300",
         selected
           ? "border-2 border-amber-500"
           : "border-gray-200 hover:border-gray-500 hover:shadow-md",
+        data.collapsed && "shadow-[3px_3px_0_white,4px_4px_0_#000,7px_7px_0_white,8px_8px_0_#000]",
+        !data.collapsed && !selected && "shadow-sm",
         data.colorTag === "ink" && "bg-ink text-white",
         data.colorTag === "amber" && "bg-amber-100",
         data.colorTag === "sky" && "bg-sky-100",

@@ -39,17 +39,20 @@ const defaultStyle: TopicStyle = {
 function mapNodeToFlow(
   node: NodeRecord,
   onSelect: (nodeId: string) => void,
-  isLoading: boolean
+  isLoading: boolean,
+  isSelected: boolean
 ) {
   return {
     id: node.id,
     type: node.nodeStyle,
     position: { x: node.x, y: node.y },
+    selected: isSelected,
     data: {
       title: node.title,
       description: node.description,
       isRoot: node.parentId === null,
       colorTag: node.colorTag ?? null,
+      collapsed: node.collapsed ?? false,
       isLoading,
       onSelect: () => onSelect(node.id)
     }
@@ -73,7 +76,43 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   } | null>(null);
   const [pendingNodeIds, setPendingNodeIds] = useState<Set<string>>(new Set());
 
-  const flowEdges = useMemo(() => edges.map(mapEdgeToFlow), [edges]);
+  // Calculate visible nodes based on collapsed state
+  const { visibleNodeIds, visibleNodes } = useMemo(() => {
+    const visible = new Set<string>();
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+    const childrenMap = new Map<string, NodeRecord[]>();
+
+    nodes.forEach(n => {
+      if (n.parentId) {
+        const children = childrenMap.get(n.parentId) || [];
+        children.push(n);
+        childrenMap.set(n.parentId, children);
+      }
+    });
+
+    const queue = nodes.filter(n => n.parentId === null); // Roots
+    const resultNodes: NodeRecord[] = [];
+
+    while (queue.length > 0) {
+      const node = queue.shift()!;
+      visible.add(node.id);
+      resultNodes.push(node);
+
+      if (!node.collapsed) {
+        const children = childrenMap.get(node.id);
+        if (children) {
+          queue.push(...children);
+        }
+      }
+    }
+    return { visibleNodeIds: visible, visibleNodes: resultNodes };
+  }, [nodes]);
+
+  const flowEdges = useMemo(() =>
+    edges
+      .filter(e => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target))
+      .map(mapEdgeToFlow),
+  [edges, visibleNodeIds]);
 
   const styleConfig = topic?.styleConfig ?? defaultStyle;
 
@@ -102,10 +141,10 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   };
 
   const onLayoutTree = useCallback(async () => {
-    const layout = layoutWithD3Tree(nodes);
+    const layout = layoutWithD3Tree(visibleNodes); // Only layout visible nodes!
     if (layout.length === 0) return;
     await updateNodePositions(layout);
-  }, [nodes, updateNodePositions]);
+  }, [visibleNodes, updateNodePositions]);
 
   const handleExpandNode = useCallback(
     async (nodeId: string) => {
@@ -114,6 +153,20 @@ export function MapCanvas({ topicId }: { topicId: string }) {
       if (!parent || !topic) return;
 
       const existingChildren = nodes.filter((item) => item.parentId === parent.id);
+
+      // If we already have children, this is just a UI expand (un-collapse)
+      // BUT existing logic creates NEW nodes via AI.
+      // The user distinction: Right Arrow = "Expand" (UI) or "Generate" (AI)?
+      // If expanding a node that has existing children but is collapsed, we should just set collapsed=false.
+      // If it is NOT collapsed and has NO children, maybe generate?
+
+      if (parent.collapsed) {
+        await db.nodes.update(parent.id, { collapsed: false });
+        return;
+      }
+
+      // If already expanded and has children, do nothing (selection logic handles child selection separate)
+      if (existingChildren.length > 0) return;
 
       const lineage: NodeRecord[] = [];
       let currentParent: NodeRecord | undefined = parent;
@@ -150,6 +203,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
           y: 0,
           nodeStyle: styleConfig.nodeStyle,
           colorTag: null,
+          collapsed: false,
           createdAt: Date.now()
         }));
 
@@ -163,8 +217,14 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         }));
 
         // 2. Calculate global layout immediately with merged data
-        const allNodes = [...nodes, ...newNodes];
-        const layoutPositions = layoutWithD3Tree(allNodes);
+        // Only consider currently visible nodes plus the new ones for layout
+        // Changing layout only for the expanded branch is tricky without disrupting others
+        // But layoutWithD3Tree handles full tree. We should layout EVERYTHING or just subtree?
+        // For now, let's keep existing behavior: re-layout everything that is relevant.
+        // Actually, be careful not to layout hidden nodes into weird places.
+        // We will layout visible nodes + new nodes.
+        const allVisibleParams = [...visibleNodes, ...newNodes];
+        const layoutPositions = layoutWithD3Tree(allVisibleParams);
 
         // 3. Apply positions to new nodes
         const positionMap = new Map(layoutPositions.map((p) => [p.id, p]));
@@ -203,7 +263,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         });
       }
     },
-    [nodes, topic, styleConfig.edgeStyle, styleConfig.nodeStyle, pendingNodeIds]
+    [nodes, topic, styleConfig.edgeStyle, styleConfig.nodeStyle, pendingNodeIds, visibleNodes]
   );
 
   const handleDeleteNode = useCallback(
@@ -243,11 +303,102 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   const [activeColorTarget, setActiveColorTarget] = useState<string | null>(null);
   const [lastColor, setLastColor] = useState<NodeRecord["colorTag"]>(null);
 
+  // Keyboard Navigation Handler
   useEffect(() => {
     if (!selectedNodeId) return;
-    const handler = (event: KeyboardEvent) => {
+
+    const handler = async (event: KeyboardEvent) => {
+      // Allow normal typing if in input fields (though we don't have many here)
+       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+
+      const currentNode = nodes.find(n => n.id === selectedNodeId);
+      if (!currentNode) return;
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const hasChildren = nodes.some(n => n.parentId === currentNode.id);
+
+        // Strategy:
+        // 1. If has children AND is expanded (collapsed=false/undefined) -> Collapse
+        // 2. If has children AND IS collapsed -> Go to parent
+        // 3. If leaf (no children) -> Go to parent
+
+        const isCollapsed = currentNode.collapsed;
+
+        if (hasChildren && !isCollapsed) {
+          // Collapse
+          await db.nodes.update(currentNode.id, { collapsed: true });
+        } else {
+          // Select Parent
+          if (currentNode.parentId) {
+            setSelectedNodeId(currentNode.parentId);
+          }
+        }
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const children = nodes.filter(n => n.parentId === currentNode.id);
+        const hasChildren = children.length > 0;
+
+        if (currentNode.collapsed) {
+           // Expand
+           await db.nodes.update(currentNode.id, { collapsed: false });
+           // Re-layout? The useMapData hook might not trigger layout automatically on just 'collapsed' generic update if it doesn't change coordinates.
+           // But changing 'collapsed' changes visibleNodes set, which might need layout adjustment if we were dynamically hiding.
+           // However, if we just hide children, the parent stays put.
+           // If we show children, they might need layout.
+           // Let's trigger a layout after expand if needed.
+           // For now, rely on render.
+        } else if (hasChildren) {
+          // Select first child (maybe middle child is better? or top most?)
+          // Usually middle is best for tree navigation, or just first.
+          // Let's sort by Y and pick middle or first.
+          const sortedChildren = children.sort((a,b) => a.y - b.y);
+          // Pick the middle one for intuitive navigation if tree is balanced, or first.
+          // Standard tree behavior: First child or visually closest.
+          const middleIndex = Math.floor(sortedChildren.length / 2);
+          setSelectedNodeId(sortedChildren[middleIndex]?.id || sortedChildren[0].id);
+        } else {
+          // Generate? User did NOT explicitly ask for right arrow to generate.
+          // They said "Right Arrow = Expand current node".
+          // If no children, "Expand" usually does nothing or triggers generation.
+          // Let's hook it to generate (handleExpandNode).
+          handleExpandNode(currentNode.id);
+        }
+      }
+
+      if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+        event.preventDefault();
+        event.stopPropagation();
+
+        // Find siblings
+        const parentId = currentNode.parentId;
+        // Includes self
+        const siblings = nodes
+            .filter(n => n.parentId === parentId)
+            .sort((a,b) => a.y - b.y);
+
+        const currentIndex = siblings.findIndex(n => n.id === currentNode.id);
+
+        if (event.key === "ArrowUp") {
+          if (currentIndex > 0) {
+            setSelectedNodeId(siblings[currentIndex - 1].id);
+          }
+        } else {
+          if (currentIndex < siblings.length - 1) {
+            setSelectedNodeId(siblings[currentIndex + 1].id);
+          }
+        }
+      }
+
       if (event.key === "Enter") {
-        handleExpandNode(selectedNodeId);
+        // Maybe still useful for something? Or just map to Expand?
+         handleExpandNode(selectedNodeId);
       }
       if (event.key === "Delete" || event.key === "Backspace") {
         handleDeleteNode(selectedNodeId);
@@ -256,16 +407,21 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         setSelectedNodeId(null);
       }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [selectedNodeId, handleExpandNode, handleDeleteNode]);
+    window.addEventListener("keydown", handler, { capture: true });
+    return () => window.removeEventListener("keydown", handler, { capture: true });
+  }, [selectedNodeId, nodes, handleExpandNode, handleDeleteNode]);
 
   const flowNodes = useMemo(
     () =>
-      nodes.map((node) =>
-        mapNodeToFlow(node, setSelectedNodeId, pendingNodeIds.has(node.id))
+      visibleNodes.map((node) =>
+        mapNodeToFlow(
+          node,
+          setSelectedNodeId,
+          pendingNodeIds.has(node.id),
+          node.id === selectedNodeId
+        )
       ),
-    [nodes, setSelectedNodeId, pendingNodeIds]
+    [visibleNodes, setSelectedNodeId, pendingNodeIds, selectedNodeId]
   );
 
   const selectedNode = selectedNodeId
@@ -291,6 +447,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         onInit={setReactFlowInstance}
         onNodeDragStop={(_, node) => updateNodePosition(node.id, node.position.x, node.position.y)}
         nodesConnectable={false}
+        nodesDraggable={false}
         fitView
         connectionLineType={
           styleConfig.edgeStyle === "step" ? ConnectionLineType.Step : ConnectionLineType.Bezier
