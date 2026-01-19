@@ -69,14 +69,12 @@ function mapEdgeToFlow(edge: EdgeRecord) {
 }
 
 export function MapCanvas({ topicId }: { topicId: string }) {
-  const { topic, updateStyle } = useTopic(topicId);
+  const { topic } = useTopic(topicId);
   const {
     nodes,
     edges,
     updateNodePosition,
     updateNodePositions,
-    setNodeStyleForTopic,
-    setEdgeStyleForTopic,
     addNodes,
     addEdges
   } = useMapData(topicId);
@@ -88,18 +86,6 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   const flowEdges = useMemo(() => edges.map(mapEdgeToFlow), [edges]);
 
   const styleConfig = topic?.styleConfig ?? defaultStyle;
-
-  const onToggleEdgeStyle = async () => {
-    const next = styleConfig.edgeStyle === "bezier" ? "step" : "bezier";
-    await updateStyle({ edgeStyle: next });
-    await setEdgeStyleForTopic(next);
-  };
-
-  const onToggleNodeStyle = async () => {
-    const next = styleConfig.nodeStyle === "nyt" ? "compact" : "nyt";
-    await updateStyle({ nodeStyle: next });
-    await setNodeStyleForTopic(next);
-  };
 
   const onFitView = () => {
     reactFlowInstance?.fitView({ padding: 0.2, duration: 500 });
@@ -283,10 +269,6 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         <MiniMap />
       </ReactFlow>
       <MapToolbar
-        edgeStyle={styleConfig.edgeStyle}
-        nodeStyle={styleConfig.nodeStyle}
-        onToggleEdgeStyle={onToggleEdgeStyle}
-        onToggleNodeStyle={onToggleNodeStyle}
         onFitView={onFitView}
         onLayoutTree={onLayoutTree}
         onExport={onExport}
