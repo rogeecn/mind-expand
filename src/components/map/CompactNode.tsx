@@ -12,19 +12,34 @@ export type CompactNodeData = {
   hasChildren?: boolean;
   onExpand?: () => void;
   onDelete?: () => void;
+  onSelect?: () => void;
 };
 
 export function CompactNode({ data, selected }: NodeProps<CompactNodeData>) {
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          data.onSelect?.();
+        }
+      }}
+      onClick={() => data.onSelect?.()}
       className={clsx(
-        "group relative w-auto min-w-[180px] max-w-[300px] rounded-sm border bg-white px-3 py-2 text-sm transition",
+        "group relative h-[96px] w-auto min-w-[180px] max-w-[300px] rounded-sm border bg-white px-3 py-2 text-left text-sm transition",
         selected
           ? "border-black bg-black text-white"
           : "border-gray-200 text-ink hover:border-gray-500"
       )}
     >
-      <Handle type="target" position={Position.Left} className="opacity-0" />
+      <Handle
+        type="target"
+        position={Position.Left}
+        isConnectable={false}
+        className="opacity-0 pointer-events-none cursor-default"
+      />
       <button
         type="button"
         onClick={(event) => {
@@ -41,12 +56,12 @@ export function CompactNode({ data, selected }: NodeProps<CompactNodeData>) {
         <X className="h-3 w-3" />
       </button>
       <div className="min-w-0 pr-7">
-        <div className="font-serif text-sm font-semibold tracking-tight break-words">
+        <div className="line-clamp-2 font-serif text-sm font-semibold tracking-tight">
           {data.title}
         </div>
         <div
           className={clsx(
-            "mt-1 text-xs leading-relaxed",
+            "line-clamp-2 mt-1 text-xs leading-relaxed",
             selected ? "text-gray-200" : "text-gray-600"
           )}
         >
@@ -72,7 +87,12 @@ export function CompactNode({ data, selected }: NodeProps<CompactNodeData>) {
           <span className={clsx("text-xs", data.isLoading && "animate-spin")}>+</span>
         </button>
       )}
-      <Handle type="source" position={Position.Right} className="opacity-0" />
+      <Handle
+        type="source"
+        position={Position.Right}
+        isConnectable={false}
+        className="opacity-0 pointer-events-none cursor-default"
+      />
     </div>
   );
 }

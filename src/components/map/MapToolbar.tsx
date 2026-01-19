@@ -1,6 +1,6 @@
 "use client";
 
-import { Waves, LayoutGrid, Focus } from "lucide-react";
+import { Waves, LayoutGrid, Focus, TreePine } from "lucide-react";
 
 type ToolbarProps = {
   edgeStyle: "bezier" | "step";
@@ -10,6 +10,7 @@ type ToolbarProps = {
   onFitView: () => void;
   onExport: () => void;
   onImport: () => void;
+  onLayoutTree: () => void;
 };
 
 export function MapToolbar({
@@ -19,7 +20,8 @@ export function MapToolbar({
   onToggleNodeStyle,
   onFitView,
   onExport,
-  onImport
+  onImport,
+  onLayoutTree
 }: ToolbarProps) {
   const buttonBase =
     "inline-flex items-center gap-2 rounded-sm border border-gray-200 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-600 transition hover:border-black hover:text-black";
@@ -29,6 +31,10 @@ export function MapToolbar({
       <button className={buttonBase} type="button" onClick={onFitView}>
         <Focus className="h-3.5 w-3.5" />
         Fit
+      </button>
+      <button className={buttonBase} type="button" onClick={onLayoutTree}>
+        <TreePine className="h-3.5 w-3.5" />
+        Tree
       </button>
       <button className={buttonBase} type="button" onClick={onToggleEdgeStyle}>
         <Waves className="h-3.5 w-3.5" />

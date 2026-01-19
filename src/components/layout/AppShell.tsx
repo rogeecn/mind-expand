@@ -107,7 +107,7 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
         onCreateTopic={handleCreateTopic}
       />
       <main className="relative flex-1 overflow-hidden">
-        <div className="flex h-full justify-center px-12">
+        <div className="flex h-full justify-center">
           {rightContent}
         </div>
       </main>

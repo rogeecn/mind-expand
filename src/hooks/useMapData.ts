@@ -32,6 +32,13 @@ export function useMapData(topicId: string | null) {
     await db.nodes.update(id, { x, y });
   };
 
+  const updateNodePositions = async (updates: { id: string; x: number; y: number }[]) => {
+    if (!topicId || updates.length === 0) return;
+    await db.transaction("rw", db.nodes, async () => {
+      await Promise.all(updates.map((update) => db.nodes.update(update.id, update)));
+    });
+  };
+
   const setNodeStyleForTopic = async (style: TopicStyle["nodeStyle"]) => {
     if (!topicId) return;
     await db.nodes.where("topicId").equals(topicId).modify({ nodeStyle: style });
@@ -48,6 +55,7 @@ export function useMapData(topicId: string | null) {
     addNodes,
     addEdges,
     updateNodePosition,
+    updateNodePositions,
     setNodeStyleForTopic,
     setEdgeStyleForTopic
   };

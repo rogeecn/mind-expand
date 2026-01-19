@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -15,10 +15,11 @@ import "reactflow/dist/style.css";
 import { NYTNode } from "@/components/map/NYTNode";
 import { CompactNode } from "@/components/map/CompactNode";
 import { MapToolbar } from "@/components/map/MapToolbar";
+import { NodeDetailsPanel } from "@/components/map/NodeDetailsPanel";
 import { useMapData } from "@/hooks/useMapData";
 import { useTopic } from "@/hooks/useTopic";
 import { db, type EdgeRecord, type NodeRecord, type TopicStyle } from "@/lib/db";
-import { calculateChildPositions } from "@/lib/layout";
+import { calculateChildPositions, layoutWithD3Tree } from "@/lib/layout";
 import { downloadExport, importExportFile } from "@/components/map/ImportExport";
 import { importPayload, validatePayload } from "@/hooks/useImportExport";
 import { expandNodeAction } from "@/app/actions/expand-node";
@@ -39,6 +40,7 @@ function mapNodeToFlow(
   pendingId: string | null,
   onExpand: (nodeId: string) => void,
   onDelete: (nodeId: string) => void,
+  onSelect: (nodeId: string) => void,
   hasChildren: boolean
 ) {
   return {
@@ -51,7 +53,8 @@ function mapNodeToFlow(
       isLoading: node.id === pendingId,
       hasChildren,
       onExpand: () => onExpand(node.id),
-      onDelete: () => onDelete(node.id)
+      onDelete: () => onDelete(node.id),
+      onSelect: () => onSelect(node.id)
     }
   } satisfies Node;
 }
@@ -71,6 +74,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     nodes,
     edges,
     updateNodePosition,
+    updateNodePositions,
     setNodeStyleForTopic,
     setEdgeStyleForTopic,
     addNodes,
@@ -120,6 +124,12 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     };
     input.click();
   };
+
+  const onLayoutTree = useCallback(async () => {
+    const layout = layoutWithD3Tree(nodes);
+    if (layout.length === 0) return;
+    await updateNodePositions(layout);
+  }, [nodes, updateNodePositions]);
 
   const handleExpandNode = useCallback(
     async (nodeId: string) => {
@@ -212,6 +222,8 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     [nodes, edges]
   );
 
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
   const flowNodes = useMemo(
     () =>
       nodes.map((node) => {
@@ -221,11 +233,27 @@ export function MapCanvas({ topicId }: { topicId: string }) {
           pendingNodeId,
           handleExpandNode,
           handleDeleteNode,
+          setSelectedNodeId,
           hasChildren
         );
       }),
-    [nodes, pendingNodeId, handleExpandNode, handleDeleteNode]
+    [nodes, pendingNodeId, handleExpandNode, handleDeleteNode, setSelectedNodeId]
   );
+
+  const selectedNode = selectedNodeId
+    ? nodes.find((node) => node.id === selectedNodeId)
+    : null;
+
+  useEffect(() => {
+    if (!selectedNodeId) return;
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedNodeId(null);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [selectedNodeId]);
 
   return (
     <div className="relative h-full w-full bg-paper">
@@ -235,6 +263,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         nodeTypes={nodeTypes}
         onInit={setReactFlowInstance}
         onNodeDragStop={(_, node) => updateNodePosition(node.id, node.position.x, node.position.y)}
+        nodesConnectable={false}
         fitView
         connectionLineType={
           styleConfig.edgeStyle === "step" ? ConnectionLineType.Step : ConnectionLineType.Bezier
@@ -250,9 +279,13 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         onToggleEdgeStyle={onToggleEdgeStyle}
         onToggleNodeStyle={onToggleNodeStyle}
         onFitView={onFitView}
+        onLayoutTree={onLayoutTree}
         onExport={onExport}
         onImport={onImport}
       />
+      {selectedNode && (
+        <NodeDetailsPanel node={selectedNode} onClose={() => setSelectedNodeId(null)} />
+      )}
     </div>
   );
 }

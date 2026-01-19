@@ -11,19 +11,34 @@ export type NYTNodeData = {
   hasChildren?: boolean;
   onExpand?: () => void;
   onDelete?: () => void;
+  onSelect?: () => void;
 };
 
 export function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          data.onSelect?.();
+        }
+      }}
+      onClick={() => data.onSelect?.()}
       className={clsx(
-        "group relative w-auto min-w-[220px] max-w-[360px] rounded-sm border bg-white p-4 shadow-sm transition",
+        "group relative h-[160px] w-auto min-w-[220px] max-w-[360px] rounded-sm border bg-white p-4 text-left shadow-sm transition",
         selected
           ? "border-black bg-black text-white"
           : "border-gray-200 text-ink hover:border-gray-500 hover:shadow-md"
       )}
     >
-      <Handle type="target" position={Position.Left} className="opacity-0" />
+      <Handle
+        type="target"
+        position={Position.Left}
+        isConnectable={false}
+        className="opacity-0 pointer-events-none cursor-default"
+      />
       <button
         type="button"
         onClick={(event) => {
@@ -40,12 +55,12 @@ export function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
         <X className="h-3 w-3" />
       </button>
       <div className="min-w-0 pr-8">
-        <h3 className="font-serif text-lg font-semibold tracking-tight break-words">
+        <h3 className="line-clamp-2 break-words font-serif text-lg font-semibold tracking-tight">
           {data.title}
         </h3>
         <p
           className={clsx(
-            "mt-2 text-sm leading-relaxed",
+            "line-clamp-3 mt-2 text-sm leading-relaxed",
             selected ? "text-gray-200" : "text-gray-600"
           )}
         >
@@ -71,7 +86,12 @@ export function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
           <Plus className={clsx("h-3.5 w-3.5", data.isLoading && "animate-spin")} />
         </button>
       )}
-      <Handle type="source" position={Position.Right} className="opacity-0" />
+      <Handle
+        type="source"
+        position={Position.Right}
+        isConnectable={false}
+        className="opacity-0 pointer-events-none cursor-default"
+      />
     </div>
   );
 }
