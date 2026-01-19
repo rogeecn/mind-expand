@@ -14,7 +14,7 @@ const ExpandInputSchema = z.object({
 
 const ExpandOutputSchema = z.object({
   logic_angle: z.string().describe("本次联想选取的逻辑维度（隐藏字段）"),
-  nodes: z.array(z.string()).min(3).max(10).describe("结果数组 (3-10个)"),
+  nodes: z.array(z.string().max(12)).min(3).max(10).describe("结果数组 (3-10个)"),
   insight: z.string().describe("一句话推荐理由")
 });
 
@@ -64,6 +64,7 @@ const expandNodePrompt = ({
     "1. **层级测试**：对每个候选词 X，必需满足逻辑：`X 属于 ${currentNode} 的一种` 或 `${currentNode} 包含 X` 或 `X 是 ${currentNode} 的直接属性`。如果不满足，丢弃。",
     "2. **颗粒度统一**：确保生成的节点与 ${existingText} 处于同一颗粒度级别。",
     "3. **语义密度**：每个关键词必须是“高浓缩语义载体”，拒绝废话。",
+    "4. **长度限制**：严格控制每个节点字数不超过 12 个字，简练精准。",
     "",
     "# Step-by-Step Internal Reasoning (CoT)",
     "在构造输出前，请在内存中执行：",
