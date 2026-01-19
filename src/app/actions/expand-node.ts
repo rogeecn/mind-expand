@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { genkit, GenerationCommonConfigSchema } from "genkit";
+import { genkit } from "genkit";
 import openAI from "@genkit-ai/compat-oai";
 
 const ExpansionSchema = z.object({
@@ -11,6 +11,7 @@ const ExpansionSchema = z.object({
 
 const ExpandInputSchema = z.object({
   rootTopic: z.string(),
+  topicDescription: z.string(),
   pathContext: z.array(z.string()),
   count: z.number().min(1).max(6)
 });
@@ -34,11 +35,17 @@ const ai = genkit({
 });
 
 
-const expandNodePrompt = ({ rootTopic, pathContext, count }: z.infer<typeof ExpandInputSchema>) => {
+const expandNodePrompt = ({
+  rootTopic,
+  topicDescription,
+  pathContext,
+  count
+}: z.infer<typeof ExpandInputSchema>) => {
   const path = pathContext.join(" > ");
   return [
     "You are a recursive mind map generator.",
     `Root topic: ${rootTopic}`,
+    `Topic constraints: ${topicDescription || "None"}`,
     `Path: ${path}`,
     `Generate ${count} distinct, concise subtopics for the last path item.`,
     "Return JSON with array 'expansions', each with title and description."

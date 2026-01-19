@@ -136,12 +136,12 @@ export function MapCanvas({ topicId }: { topicId: string }) {
       .map((item) => item.title)
       .filter((value) => value.length > 0);
 
-
     const count = 3;
     setPendingNodeId(parent.id);
     try {
       const response = await expandNodeAction({
         rootTopic: topic.rootKeyword,
+        topicDescription: topic.description,
         pathContext,
         count
       });
@@ -175,9 +175,8 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     }
   };
 
-
   return (
-    <div className="relative h-screen w-screen bg-paper">
+    <div className="relative h-full w-full bg-paper">
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}

@@ -13,11 +13,12 @@ export function useTopic(topicId: string | null) {
     return db.topics.get(topicId);
   }, [topicId]);
 
-  const createTopic = async (rootKeyword: string) => {
+  const createTopic = async (rootKeyword: string, description: string) => {
     const now = Date.now();
     const newTopic: TopicRecord = {
       id: createId(),
       rootKeyword,
+      description,
       styleConfig: defaultStyle,
       createdAt: now,
       updatedAt: now
@@ -37,5 +38,10 @@ export function useTopic(topicId: string | null) {
     });
   };
 
-  return { topic, createTopic, updateStyle };
+  const updateDescription = async (description: string) => {
+    if (!topicId) return;
+    await db.topics.update(topicId, { description, updatedAt: Date.now() });
+  };
+
+  return { topic, createTopic, updateStyle, updateDescription };
 }

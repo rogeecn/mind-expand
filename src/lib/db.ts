@@ -8,6 +8,7 @@ export type TopicStyle = {
 export type TopicRecord = {
   id: string;
   rootKeyword: string;
+  description: string;
   styleConfig: TopicStyle;
   createdAt: number;
   updatedAt: number;
@@ -45,6 +46,18 @@ class MindMapDatabase extends Dexie {
       topics: "id, rootKeyword, updatedAt",
       nodes: "id, topicId, parentId",
       edges: "id, topicId, source"
+    });
+
+    this.version(2).stores({
+      topics: "id, rootKeyword, updatedAt",
+      nodes: "id, topicId, parentId",
+      edges: "id, topicId, source"
+    }).upgrade((transaction) => {
+      return transaction.table("topics").toCollection().modify((topic) => {
+        if (!topic.description) {
+          topic.description = "";
+        }
+      });
     });
   }
 }
