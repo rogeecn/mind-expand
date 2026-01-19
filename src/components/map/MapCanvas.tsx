@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -8,8 +8,7 @@ import ReactFlow, {
   type Edge,
   type Node,
   type NodeTypes,
-  ConnectionLineType,
-  type NodeMouseHandler
+  ConnectionLineType
 } from "reactflow";
 import "reactflow/dist/style.css";
 
@@ -35,7 +34,11 @@ const defaultStyle: TopicStyle = {
   nodeStyle: "nyt"
 };
 
-function mapNodeToFlow(node: NodeRecord, pendingId: string | null) {
+function mapNodeToFlow(
+  node: NodeRecord,
+  pendingId: string | null,
+  onExpand: (nodeId: string) => void
+) {
   return {
     id: node.id,
     type: node.nodeStyle,
@@ -43,7 +46,8 @@ function mapNodeToFlow(node: NodeRecord, pendingId: string | null) {
     data: {
       title: node.title,
       description: node.description,
-      isLoading: node.id === pendingId
+      isLoading: node.id === pendingId,
+      onExpand: () => onExpand(node.id)
     }
   } satisfies Node;
 }
@@ -73,10 +77,6 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   } | null>(null);
   const [pendingNodeId, setPendingNodeId] = useState<string | null>(null);
 
-  const flowNodes = useMemo(
-    () => nodes.map((node) => mapNodeToFlow(node, pendingNodeId)),
-    [nodes, pendingNodeId]
-  );
   const flowEdges = useMemo(() => edges.map(mapEdgeToFlow), [edges]);
 
   const styleConfig = topic?.styleConfig ?? defaultStyle;
@@ -117,63 +117,71 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     input.click();
   };
 
-  const onNodeClick: NodeMouseHandler = async (_, node) => {
-    const parent = nodes.find((item) => item.id === node.id);
-    if (!parent || !topic) return;
+  const handleExpandNode = useCallback(
+    async (nodeId: string) => {
+      const parent = nodes.find((item) => item.id === nodeId);
+      if (!parent || !topic) return;
 
-    const existingChildren = nodes.filter((item) => item.parentId === parent.id);
-    if (existingChildren.length > 0) return;
+      const existingChildren = nodes.filter((item) => item.parentId === parent.id);
+      if (existingChildren.length > 0) return;
 
-    const lineage: NodeRecord[] = [];
-    let currentParent: NodeRecord | undefined = parent;
-    while (currentParent) {
-      lineage.push(currentParent);
-      if (!currentParent.parentId) break;
-      currentParent = nodes.find((item) => item.id === currentParent?.parentId);
-    }
-    const pathContext = lineage
-      .reverse()
-      .map((item) => item.title)
-      .filter((value) => value.length > 0);
+      const lineage: NodeRecord[] = [];
+      let currentParent: NodeRecord | undefined = parent;
+      while (currentParent) {
+        lineage.push(currentParent);
+        if (!currentParent.parentId) break;
+        currentParent = nodes.find((item) => item.id === currentParent?.parentId);
+      }
+      const pathContext = lineage
+        .reverse()
+        .map((item) => item.title)
+        .filter((value) => value.length > 0);
 
-    const count = 3;
-    setPendingNodeId(parent.id);
-    try {
-      const response = await expandNodeAction({
-        rootTopic: topic.rootKeyword,
-        topicDescription: topic.description,
-        pathContext,
-        count
-      });
+      const count = 3;
+      setPendingNodeId(parent.id);
+      try {
+        const response = await expandNodeAction({
+          rootTopic: topic.rootKeyword,
+          topicDescription: topic.description,
+          pathContext,
+          count
+        });
 
-      const positions = calculateChildPositions(parent, existingChildren, response.expansions.length);
-      const newNodes: NodeRecord[] = response.expansions.map((expansion, index) => ({
-        id: createId(),
-        topicId: topic.id,
-        parentId: parent.id,
-        title: expansion.title,
-        description: expansion.description,
-        x: positions[index]?.x ?? parent.x + 280,
-        y: positions[index]?.y ?? parent.y,
-        nodeStyle: styleConfig.nodeStyle,
-        createdAt: Date.now()
-      }));
+        const positions = calculateChildPositions(parent, existingChildren, response.expansions.length);
+        const newNodes: NodeRecord[] = response.expansions.map((expansion, index) => ({
+          id: createId(),
+          topicId: topic.id,
+          parentId: parent.id,
+          title: expansion.title,
+          description: expansion.description,
+          x: positions[index]?.x ?? parent.x + 280,
+          y: positions[index]?.y ?? parent.y,
+          nodeStyle: styleConfig.nodeStyle,
+          createdAt: Date.now()
+        }));
 
-      const newEdges: EdgeRecord[] = newNodes.map((child) => ({
-        id: createId(),
-        topicId: topic.id,
-        source: parent.id,
-        target: child.id,
-        edgeStyle: styleConfig.edgeStyle,
-        createdAt: Date.now()
-      }));
+        const newEdges: EdgeRecord[] = newNodes.map((child) => ({
+          id: createId(),
+          topicId: topic.id,
+          source: parent.id,
+          target: child.id,
+          edgeStyle: styleConfig.edgeStyle,
+          createdAt: Date.now()
+        }));
 
-      await addNodes(newNodes);
-      await addEdges(newEdges);
-    } finally {
-      setPendingNodeId(null);
-    }
-  };
+        await addNodes(newNodes);
+        await addEdges(newEdges);
+      } finally {
+        setPendingNodeId(null);
+      }
+    },
+    [nodes, topic, styleConfig.edgeStyle, styleConfig.nodeStyle, addNodes, addEdges]
+  );
+
+  const flowNodes = useMemo(
+    () => nodes.map((node) => mapNodeToFlow(node, pendingNodeId, handleExpandNode)),
+    [nodes, pendingNodeId, handleExpandNode]
+  );
 
   return (
     <div className="relative h-full w-full bg-paper">
@@ -183,7 +191,6 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         nodeTypes={nodeTypes}
         onInit={setReactFlowInstance}
         onNodeDragStop={(_, node) => updateNodePosition(node.id, node.position.x, node.position.y)}
-        onNodeClick={onNodeClick}
         fitView
         connectionLineType={
           styleConfig.edgeStyle === "step" ? ConnectionLineType.Step : ConnectionLineType.Bezier
