@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { Handle, Position, type NodeProps } from "reactflow";
 
-import { X } from "lucide-react";
+import { Loader2, Plus, X } from "lucide-react";
 
 export type CompactNodeData = {
   title: string;
@@ -77,14 +77,18 @@ export function CompactNode({ data, selected }: NodeProps<CompactNodeData>) {
             data.onExpand?.();
           }}
           className={clsx(
-            "absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full border bg-white text-[10px] transition",
+            "absolute -right-4 top-1/2 h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border bg-white text-[10px] transition",
             data.isLoading ? "flex" : "hidden group-hover:flex",
             selected
               ? "border-white bg-black text-white"
               : "border-gray-300 text-gray-500 group-hover:border-gray-700 group-hover:text-gray-900"
           )}
         >
-          <span className={clsx("text-xs", data.isLoading && "animate-spin")}>+</span>
+          {data.isLoading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Plus className="h-3.5 w-3.5" />
+          )}
         </button>
       )}
       <Handle

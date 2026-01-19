@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { Plus, X } from "lucide-react";
+import { Loader2, Plus, X } from "lucide-react";
 
 export type NYTNodeData = {
   title: string;
@@ -76,14 +76,18 @@ export function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
             data.onExpand?.();
           }}
           className={clsx(
-            "absolute -right-3 top-1/2 h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border bg-white text-xs transition",
+            "absolute -right-4 top-1/2 h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border bg-white text-xs transition",
             data.isLoading ? "flex" : "hidden group-hover:flex",
             selected
               ? "border-white bg-black text-white"
               : "border-gray-300 text-gray-500 group-hover:border-gray-700 group-hover:text-gray-900"
           )}
         >
-          <Plus className={clsx("h-3.5 w-3.5", data.isLoading && "animate-spin")} />
+          {data.isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4" />
+          )}
         </button>
       )}
       <Handle

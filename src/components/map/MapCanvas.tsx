@@ -37,7 +37,7 @@ const defaultStyle: TopicStyle = {
 
 function mapNodeToFlow(
   node: NodeRecord,
-  pendingId: string | null,
+  pendingIds: Set<string>,
   onExpand: (nodeId: string) => void,
   onDelete: (nodeId: string) => void,
   onSelect: (nodeId: string) => void,
@@ -50,7 +50,7 @@ function mapNodeToFlow(
     data: {
       title: node.title,
       description: node.description,
-      isLoading: node.id === pendingId,
+      isLoading: pendingIds.has(node.id),
       hasChildren,
       onExpand: () => onExpand(node.id),
       onDelete: () => onDelete(node.id),
@@ -83,7 +83,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   const [reactFlowInstance, setReactFlowInstance] = useState<{
     fitView: (options?: { padding?: number; duration?: number }) => void;
   } | null>(null);
-  const [pendingNodeId, setPendingNodeId] = useState<string | null>(null);
+  const [pendingNodeIds, setPendingNodeIds] = useState<Set<string>>(new Set());
 
   const flowEdges = useMemo(() => edges.map(mapEdgeToFlow), [edges]);
 
@@ -133,6 +133,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
 
   const handleExpandNode = useCallback(
     async (nodeId: string) => {
+      if (pendingNodeIds.has(nodeId)) return;
       const parent = nodes.find((item) => item.id === nodeId);
       if (!parent || !topic) return;
 
@@ -152,7 +153,11 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         .filter((value) => value.length > 0);
 
       const count = 6;
-      setPendingNodeId(parent.id);
+      setPendingNodeIds((prev) => {
+        const next = new Set(prev);
+        next.add(parent.id);
+        return next;
+      });
       try {
         const response = await expandNodeAction({
           rootTopic: topic.rootKeyword,
@@ -186,10 +191,14 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         await addNodes(newNodes);
         await addEdges(newEdges);
       } finally {
-        setPendingNodeId(null);
+        setPendingNodeIds((prev) => {
+          const next = new Set(prev);
+          next.delete(parent.id);
+          return next;
+        });
       }
     },
-    [nodes, topic, styleConfig.edgeStyle, styleConfig.nodeStyle, addNodes, addEdges]
+    [nodes, topic, styleConfig.edgeStyle, styleConfig.nodeStyle, addNodes, addEdges, pendingNodeIds]
   );
 
   const handleDeleteNode = useCallback(
@@ -230,14 +239,14 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         const hasChildren = nodes.some((item) => item.parentId === node.id);
         return mapNodeToFlow(
           node,
-          pendingNodeId,
+          pendingNodeIds,
           handleExpandNode,
           handleDeleteNode,
           setSelectedNodeId,
           hasChildren
         );
       }),
-    [nodes, pendingNodeId, handleExpandNode, handleDeleteNode, setSelectedNodeId]
+    [nodes, pendingNodeIds, handleExpandNode, handleDeleteNode, setSelectedNodeId]
   );
 
   const selectedNode = selectedNodeId

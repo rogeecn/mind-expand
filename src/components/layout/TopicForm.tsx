@@ -16,13 +16,23 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
   const [rootKeyword, setRootKeyword] = useState("");
   const [description, setDescription] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [senseOptions, setSenseOptions] = useState<string[]>([]);
+  const [selectedSense, setSelectedSense] = useState<string | null>(null);
 
   const handleAnalyze = async () => {
     if (!rootKeyword.trim()) return;
     setIsAnalyzing(true);
     try {
       const result = await analyzeTopicAction({ rootTopic: rootKeyword.trim() });
-      setDescription(result.constraints);
+      if (result.isAmbiguous) {
+        setSenseOptions(result.senseOptions);
+        setSelectedSense(null);
+        setDescription("");
+      } else {
+        setSenseOptions([]);
+        setSelectedSense(null);
+        setDescription(result.constraints ?? "");
+      }
     } finally {
       setIsAnalyzing(false);
     }
@@ -30,6 +40,8 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
 
   const handleRootChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRootKeyword(event.target.value);
+    setSenseOptions([]);
+    setSelectedSense(null);
   };
 
   const handleDescriptionChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -78,6 +90,46 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
           </div>
         </div>
 
+        {senseOptions.length > 0 && (
+          <div className="space-y-3">
+            <label className="text-[11px] uppercase tracking-[0.3em] text-gray-500">
+              选择语义
+            </label>
+            <div className="grid gap-2">
+              {senseOptions.map((option) => (
+                <label
+                  key={option}
+                  className="flex cursor-pointer items-center gap-3 rounded-sm border border-gray-200 px-3 py-2 text-sm text-gray-600 transition hover:border-black hover:text-ink"
+                >
+                  <input
+                    type="radio"
+                    name="sense"
+                    value={option}
+                    checked={selectedSense === option}
+                    onChange={async () => {
+                      setSelectedSense(option);
+                      setDescription("");
+                      setIsAnalyzing(true);
+                      try {
+                        const result = await analyzeTopicAction({
+                          rootTopic: rootKeyword.trim(),
+                          selectedSense: option
+                        });
+                        setDescription(result.constraints ?? "");
+                        setSenseOptions([]);
+                      } finally {
+                        setIsAnalyzing(false);
+                      }
+                    }}
+                    className="h-4 w-4 border-gray-300 text-black"
+                  />
+                  <span>{option}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-3">
           <label
             className="text-[11px] uppercase tracking-[0.3em] text-gray-500"
@@ -93,6 +145,9 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
             placeholder="Describe the scope, assumptions, or exclusions for this topic"
             className="min-h-[160px] w-full rounded-sm border border-gray-300 bg-white px-4 py-3 text-sm text-ink focus:border-black focus:outline-none"
           />
+          {isAnalyzing && (
+            <p className="text-xs text-gray-400">AI 正在分析语义...</p>
+          )}
         </div>
 
         <div className="pt-2">
