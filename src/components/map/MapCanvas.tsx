@@ -3,27 +3,27 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactFlow, {
   Background,
+  ConnectionLineType,
   Controls,
   MiniMap,
   type Edge,
   type Node,
-  type NodeTypes,
-  ConnectionLineType
+  type NodeTypes
 } from "reactflow";
 import "reactflow/dist/style.css";
 
-import { NYTNode } from "@/components/map/NYTNode";
 import { CompactNode } from "@/components/map/CompactNode";
 import { MapToolbar } from "@/components/map/MapToolbar";
 import { NodeDetailsPanel } from "@/components/map/NodeDetailsPanel";
+import { NYTNode } from "@/components/map/NYTNode";
 import { useMapData } from "@/hooks/useMapData";
 import { useTopic } from "@/hooks/useTopic";
 import { db, type EdgeRecord, type NodeRecord, type TopicStyle } from "@/lib/db";
 import { calculateChildPositions, layoutWithD3Tree } from "@/lib/layout";
 
+import { expandNodeAction } from "@/app/actions/expand-node";
 import { downloadExport, importExportFile } from "@/components/map/ImportExport";
 import { importPayload, validatePayload } from "@/hooks/useImportExport";
-import { expandNodeAction } from "@/app/actions/expand-node";
 import { createId } from "@/lib/uuid";
 
 const nodeTypes: NodeTypes = {
@@ -127,7 +127,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         .map((item) => item.title)
         .filter((value) => value.length > 0);
 
-      const count = 6;
+
       setPendingNodeIds((prev) => new Set(prev).add(nodeId));
 
       try {
@@ -135,16 +135,17 @@ export function MapCanvas({ topicId }: { topicId: string }) {
           rootTopic: topic.rootKeyword,
           topicDescription: topic.description,
           pathContext,
-          count
+          existingChildren: existingChildren.map((child) => child.title),
+
         });
 
-        const positions = calculateChildPositions(parent, existingChildren, response.expansions.length);
-        const newNodes: NodeRecord[] = response.expansions.map((expansion, index) => ({
+        const positions = calculateChildPositions(parent, existingChildren, response.nodes.length);
+        const newNodes: NodeRecord[] = response.nodes.map((nodeTitle, index) => ({
           id: createId(),
           topicId: topic.id,
           parentId: parent.id,
-          title: expansion.title,
-          description: expansion.description,
+          title: nodeTitle,
+          description: response.insight ?? "",
           x: positions[index]?.x ?? parent.x + 280,
           y: positions[index]?.y ?? parent.y,
           nodeStyle: styleConfig.nodeStyle,
