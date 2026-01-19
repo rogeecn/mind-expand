@@ -1,7 +1,7 @@
 import type { NodeRecord } from "@/lib/db";
 import { hierarchy, tree } from "d3-hierarchy";
 
-const DEFAULT_ROW_GAP = 180;
+const DEFAULT_ROW_GAP = 50;
 const DEFAULT_COLUMN_GAP = 480;
 const NYT_TITLE_CHARS = 20;
 const NYT_DESC_CHARS = 32;
@@ -10,7 +10,7 @@ const COMPACT_DESC_CHARS = 36;
 const NYT_MAX_WIDTH = 360;
 const COMPACT_MAX_WIDTH = 300;
 const COLUMN_PADDING = 140;
-const VERTICAL_PADDING = 60;
+const VERTICAL_PADDING = 24;
 
 const estimateLines = (text: string, perLine: number) => {
   const trimmed = text.trim();
@@ -18,23 +18,8 @@ const estimateLines = (text: string, perLine: number) => {
   return Math.max(1, Math.ceil(trimmed.length / perLine));
 };
 
-const estimateNodeHeight = (node: NodeRecord) => {
-  const isCompact = node.nodeStyle === "compact";
-  const titleLines = estimateLines(
-    node.title,
-    isCompact ? COMPACT_TITLE_CHARS : NYT_TITLE_CHARS
-  );
-  const descLines = estimateLines(
-    node.description,
-    isCompact ? COMPACT_DESC_CHARS : NYT_DESC_CHARS
-  );
-  const titleLineHeight = isCompact ? 18 : 24;
-  const descLineHeight = isCompact ? 16 : 18;
-  const padding = isCompact ? 20 : 28;
-  const gap = isCompact ? 6 : 10;
-  const minHeight = isCompact ? 72 : 120;
-  const height = padding + titleLines * titleLineHeight + descLines * descLineHeight + gap;
-  return Math.max(minHeight, height);
+const estimateNodeHeight = (_node: NodeRecord) => {
+  return 50;
 };
 
 const estimateNodeWidth = (node: NodeRecord) => {

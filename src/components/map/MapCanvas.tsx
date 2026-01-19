@@ -19,10 +19,12 @@ import { NodeDetailsPanel } from "@/components/map/NodeDetailsPanel";
 import { useMapData } from "@/hooks/useMapData";
 import { useTopic } from "@/hooks/useTopic";
 import { db, type EdgeRecord, type NodeRecord, type TopicStyle } from "@/lib/db";
-import { layoutWithD3Tree } from "@/lib/layout";
+import { calculateChildPositions, layoutWithD3Tree } from "@/lib/layout";
 
 import { downloadExport, importExportFile } from "@/components/map/ImportExport";
 import { importPayload, validatePayload } from "@/hooks/useImportExport";
+import { expandNodeAction } from "@/app/actions/expand-node";
+import { createId } from "@/lib/uuid";
 
 const nodeTypes: NodeTypes = {
   nyt: NYTNode,
@@ -34,7 +36,11 @@ const defaultStyle: TopicStyle = {
   nodeStyle: "nyt"
 };
 
-function mapNodeToFlow(node: NodeRecord, onSelect: (nodeId: string) => void) {
+function mapNodeToFlow(
+  node: NodeRecord,
+  onSelect: (nodeId: string) => void,
+  isLoading: boolean
+) {
   return {
     id: node.id,
     type: node.nodeStyle,
@@ -44,6 +50,7 @@ function mapNodeToFlow(node: NodeRecord, onSelect: (nodeId: string) => void) {
       description: node.description,
       isRoot: node.parentId === null,
       colorTag: node.colorTag ?? null,
+      isLoading,
       onSelect: () => onSelect(node.id)
     }
   } satisfies Node;
@@ -64,6 +71,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   const [reactFlowInstance, setReactFlowInstance] = useState<{
     fitView: (options?: { padding?: number; duration?: number }) => void;
   } | null>(null);
+  const [pendingNodeIds, setPendingNodeIds] = useState<Set<string>>(new Set());
 
   const flowEdges = useMemo(() => edges.map(mapEdgeToFlow), [edges]);
 
@@ -98,6 +106,76 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     if (layout.length === 0) return;
     await updateNodePositions(layout);
   }, [nodes, updateNodePositions]);
+
+  const handleExpandNode = useCallback(
+    async (nodeId: string) => {
+      if (pendingNodeIds.has(nodeId)) return;
+      const parent = nodes.find((item) => item.id === nodeId);
+      if (!parent || !topic) return;
+
+      const existingChildren = nodes.filter((item) => item.parentId === parent.id);
+
+      const lineage: NodeRecord[] = [];
+      let currentParent: NodeRecord | undefined = parent;
+      while (currentParent) {
+        lineage.push(currentParent);
+        if (!currentParent.parentId) break;
+        currentParent = nodes.find((item) => item.id === currentParent?.parentId);
+      }
+      const pathContext = lineage
+        .reverse()
+        .map((item) => item.title)
+        .filter((value) => value.length > 0);
+
+      const count = 6;
+      setPendingNodeIds((prev) => new Set(prev).add(nodeId));
+
+      try {
+        const response = await expandNodeAction({
+          rootTopic: topic.rootKeyword,
+          topicDescription: topic.description,
+          pathContext,
+          count
+        });
+
+        const positions = calculateChildPositions(parent, existingChildren, response.expansions.length);
+        const newNodes: NodeRecord[] = response.expansions.map((expansion, index) => ({
+          id: createId(),
+          topicId: topic.id,
+          parentId: parent.id,
+          title: expansion.title,
+          description: expansion.description,
+          x: positions[index]?.x ?? parent.x + 280,
+          y: positions[index]?.y ?? parent.y,
+          nodeStyle: styleConfig.nodeStyle,
+          colorTag: null,
+          createdAt: Date.now()
+        }));
+
+        const newEdges: EdgeRecord[] = newNodes.map((child) => ({
+          id: createId(),
+          topicId: topic.id,
+          source: parent.id,
+          target: child.id,
+          edgeStyle: styleConfig.edgeStyle,
+          createdAt: Date.now()
+        }));
+
+        await db.transaction("rw", db.nodes, db.edges, async () => {
+          await db.nodes.bulkPut(newNodes);
+          await db.edges.bulkPut(newEdges);
+        });
+      } finally {
+        setPendingNodeIds((prev) => {
+          const next = new Set(prev);
+          next.delete(nodeId);
+          return next;
+        });
+      }
+    },
+    [nodes, topic, styleConfig.edgeStyle, styleConfig.nodeStyle, pendingNodeIds]
+  );
+
   const handleDeleteNode = useCallback(
     async (nodeId: string) => {
       const target = nodes.find((node) => node.id === nodeId);
@@ -138,6 +216,9 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   useEffect(() => {
     if (!selectedNodeId) return;
     const handler = (event: KeyboardEvent) => {
+      if (event.key === "Enter") {
+        handleExpandNode(selectedNodeId);
+      }
       if (event.key === "Delete" || event.key === "Backspace") {
         handleDeleteNode(selectedNodeId);
       }
@@ -147,11 +228,14 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [selectedNodeId, handleDeleteNode]);
+  }, [selectedNodeId, handleExpandNode, handleDeleteNode]);
 
   const flowNodes = useMemo(
-    () => nodes.map((node) => mapNodeToFlow(node, setSelectedNodeId)),
-    [nodes, setSelectedNodeId]
+    () =>
+      nodes.map((node) =>
+        mapNodeToFlow(node, setSelectedNodeId, pendingNodeIds.has(node.id))
+      ),
+    [nodes, setSelectedNodeId, pendingNodeIds]
   );
 
   const selectedNode = selectedNodeId
@@ -161,7 +245,6 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   useEffect(() => {
     setActiveColorTarget(selectedNodeId);
   }, [selectedNodeId]);
-
 
   const handleSetColor = async (color: NodeRecord["colorTag"]) => {
     if (!activeColorTarget) return;
