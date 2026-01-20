@@ -29,7 +29,6 @@ export type NodeRecord = {
 };
 
 export type EdgeRecord = {
-
   id: string;
   topicId: string;
   source: string;
@@ -38,10 +37,21 @@ export type EdgeRecord = {
   createdAt: number;
 };
 
+export type ChatMessageRecord = {
+  id: string;
+  topicId: string;
+  nodeId: string;
+  role: "user" | "assistant";
+  content: string;
+  promptType?: "direct" | "cause" | "counter" | "timeline" | "analogy";
+  createdAt: number;
+};
+
 class MindMapDatabase extends Dexie {
   topics!: Table<TopicRecord, string>;
   nodes!: Table<NodeRecord, string>;
   edges!: Table<EdgeRecord, string>;
+  chatMessages!: Table<ChatMessageRecord, string>;
 
   constructor() {
     super("MindExpandDB");
@@ -85,6 +95,13 @@ class MindMapDatabase extends Dexie {
           node.collapsed = false;
         }
       });
+    });
+
+    this.version(5).stores({
+      topics: "id, rootKeyword, updatedAt",
+      nodes: "id, topicId, parentId",
+      edges: "id, topicId, source",
+      chatMessages: "id, [topicId+nodeId], createdAt"
     });
   }
 }
