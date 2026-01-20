@@ -9,7 +9,8 @@ const ExpandInputSchema = z.object({
   rootTopic: z.string(),
   topicDescription: z.string(),
   pathContext: z.array(z.string()),
-  existingChildren: z.array(z.string())
+  existingChildren: z.array(z.string()),
+  count: z.number().min(1).max(10)
 });
 
 const ExpandOutputSchema = z.object({

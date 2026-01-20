@@ -213,7 +213,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         .map((item) => item.title)
         .filter((value) => value.length > 0);
 
-
+      const count = 6;
       setPendingNodeIds((prev) => new Set(prev).add(nodeId));
 
       try {
@@ -222,11 +222,12 @@ export function MapCanvas({ topicId }: { topicId: string }) {
           topicDescription: topic.description,
           pathContext,
           existingChildren: existingChildren.map((child) => child.title),
-
+          count
         });
 
+
         // 1. Create new nodes with temporary positions
-        const newNodes: NodeRecord[] = response.nodes.map((nodeTitle) => ({
+        const newNodes: NodeRecord[] = response.nodes.map((nodeTitle: string) => ({
           id: createId(),
           topicId: topic.id,
           parentId: parent.id,

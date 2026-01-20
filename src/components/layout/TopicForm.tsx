@@ -12,10 +12,12 @@ type TopicFormProps = {
   onSubmit: (values: TopicFormValues) => void;
 };
 
-  export function TopicForm({ onSubmit }: TopicFormProps) {
+export function TopicForm({ onSubmit }: TopicFormProps) {
+
   const [rootKeyword, setRootKeyword] = useState("");
   const [description, setDescription] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [senseOptions, setSenseOptions] = useState<string[]>([]);
   const [selectedSenses, setSelectedSenses] = useState<string[]>([]);
 
@@ -38,10 +40,31 @@ type TopicFormProps = {
     }
   };
 
+  const handleConfirmScopes = async () => {
+    if (!rootKeyword.trim() || selectedSenses.length === 0) return;
+    setIsConfirming(true);
+    try {
+      const result = await analyzeTopicAction({
+        rootTopic: rootKeyword.trim(),
+        selectedSenses
+      });
+      setDescription(result.constraints ?? "");
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
   const handleRootChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRootKeyword(event.target.value);
     setSenseOptions([]);
     setSelectedSenses([]);
+  };
+
+  const handleCreateTopic = () => {
+    if (isAnalyzing || isConfirming) return;
+    setIsConfirming(true);
+    Promise.resolve(onSubmit({ rootKeyword, description }))
+      .finally(() => setIsConfirming(false));
   };
 
   const handleDescriptionChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -82,7 +105,7 @@ type TopicFormProps = {
             <button
               type="button"
               onClick={handleAnalyze}
-              disabled={isAnalyzing || !rootKeyword.trim()}
+              disabled={isAnalyzing || isConfirming || !rootKeyword.trim()}
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm border border-gray-300 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gray-600 transition hover:border-black hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isAnalyzing ? "Analyzing" : "AI Scope"}
@@ -104,40 +127,33 @@ type TopicFormProps = {
                   <input
                     type="checkbox"
                     checked={selectedSenses.includes(option)}
-                    onChange={async (e) => {
+                    onChange={(e) => {
                       const isChecked = e.target.checked;
                       let newSenses: string[];
 
                       if (isChecked) {
                         newSenses = [...selectedSenses, option];
                       } else {
-                        newSenses = selectedSenses.filter(s => s !== option);
+                        newSenses = selectedSenses.filter((sense) => sense !== option);
                       }
 
                       setSelectedSenses(newSenses);
-
-                      if (newSenses.length === 0) {
-                        setDescription("");
-                        return;
-                      }
-
-                      setIsAnalyzing(true);
-                      try {
-                        const result = await analyzeTopicAction({
-                          rootTopic: rootKeyword.trim(),
-                          selectedSenses: newSenses
-                        });
-                        setDescription(result.constraints ?? "");
-                        // Do not clear options
-                      } finally {
-                        setIsAnalyzing(false);
-                      }
                     }}
                     className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
                   />
                   <span>{option}</span>
                 </label>
               ))}
+            </div>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={handleConfirmScopes}
+                disabled={isConfirming || selectedSenses.length === 0}
+                className="rounded-sm border border-gray-300 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-600 transition hover:border-black hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isConfirming ? "Confirming" : "Confirm Scopes"}
+              </button>
             </div>
           </div>
         )}
@@ -157,16 +173,17 @@ type TopicFormProps = {
             placeholder="Describe the scope, assumptions, or exclusions for this topic"
             className="min-h-[160px] w-full rounded-sm border border-gray-300 bg-white px-4 py-3 text-sm text-ink focus:border-black focus:outline-none"
           />
-          {isAnalyzing && (
+          {(isAnalyzing || isConfirming) && (
             <p className="text-xs text-gray-400">AI 正在分析语义...</p>
           )}
         </div>
 
         <div className="pt-2">
           <button
-            className="rounded-sm border border-ink px-8 py-3 font-medium text-ink transition hover:bg-ink hover:text-white"
-            onClick={() => onSubmit({ rootKeyword, description })}
+            className="rounded-sm border border-ink px-8 py-3 font-medium text-ink transition hover:bg-ink hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={handleCreateTopic}
             type="button"
+            disabled={isAnalyzing || isConfirming || !rootKeyword.trim()}
           >
             Create Topic
           </button>

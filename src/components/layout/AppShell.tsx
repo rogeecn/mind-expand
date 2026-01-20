@@ -3,8 +3,10 @@
 import { TopicForm, type TopicFormValues } from "@/components/layout/TopicForm";
 import { TopicSidebar } from "@/components/layout/TopicSidebar";
 import { MapCanvas } from "@/components/map/MapCanvas";
+import { expandNodeAction } from "@/app/actions/expand-node";
 import { useTopic } from "@/hooks/useTopic";
-import type { NodeRecord } from "@/lib/db";
+import { calculateChildPositions } from "@/lib/layout";
+import type { EdgeRecord, NodeRecord } from "@/lib/db";
 import { db } from "@/lib/db";
 import { createId } from "@/lib/uuid";
 import { PanelLeftOpen } from "lucide-react";
@@ -70,6 +72,47 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
     };
 
     await db.nodes.put(rootNode);
+
+    try {
+      const response = await expandNodeAction({
+        rootTopic: newTopic.rootKeyword,
+        topicDescription: newTopic.description,
+        pathContext: [newTopic.rootKeyword],
+        existingChildren: [],
+        count: 6
+      });
+
+      const positions = calculateChildPositions(rootNode, [], response.nodes.length);
+      const newNodes: NodeRecord[] = response.nodes.map((nodeTitle: string, index: number) => ({
+        id: createId(),
+        topicId: newTopic.id,
+        parentId: rootNode.id,
+        title: nodeTitle,
+        description: response.insight,
+        x: positions[index]?.x ?? rootNode.x + 280,
+        y: positions[index]?.y ?? rootNode.y,
+        nodeStyle: newTopic.styleConfig.nodeStyle,
+        colorTag: null,
+        createdAt: Date.now()
+      }));
+
+      const newEdges: EdgeRecord[] = newNodes.map((child) => ({
+        id: createId(),
+        topicId: newTopic.id,
+        source: rootNode.id,
+        target: child.id,
+        edgeStyle: newTopic.styleConfig.edgeStyle,
+        createdAt: Date.now()
+      }));
+
+      await db.transaction("rw", db.nodes, db.edges, async () => {
+        await db.nodes.bulkPut(newNodes);
+        await db.edges.bulkPut(newEdges);
+      });
+    } catch (error) {
+      console.error("[create-topic] failed to prefill nodes", error);
+    }
+
     localStorage.setItem("activeTopicId", newTopic.id);
     setActiveTopicId(newTopic.id);
     setIsCreating(false);
