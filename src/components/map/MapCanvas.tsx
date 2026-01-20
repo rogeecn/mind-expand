@@ -503,6 +503,21 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     ? nodes.find((node) => node.id === selectedNodeId)
     : null;
 
+  const pathContext = useMemo(() => {
+    if (!selectedNode || !topic) return [];
+    const lineage: NodeRecord[] = [];
+    let current: NodeRecord | undefined = selectedNode;
+    while (current) {
+      lineage.push(current);
+      if (!current.parentId) break;
+      current = nodes.find((node) => node.id === current?.parentId);
+    }
+    return lineage
+      .reverse()
+      .map((node) => node.title)
+      .filter((value) => value.length > 0);
+  }, [selectedNode, nodes, topic]);
+
   const handleSetColor = async (color: NodeRecord["colorTag"]) => {
     if (!selectedNodeId) return;
     await db.nodes.update(selectedNodeId, { colorTag: color });
@@ -538,8 +553,13 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         lastColor={lastColor}
       />
 
-      {selectedNode && (
-        <NodeDetailsPanel node={selectedNode} onClose={() => setSelectedNodeId(null)} />
+      {selectedNode && topic && (
+        <NodeDetailsPanel
+          node={selectedNode}
+          rootTopic={topic.rootKeyword}
+          pathContext={pathContext}
+          onClose={() => setSelectedNodeId(null)}
+        />
       )}
     </div>
   );
