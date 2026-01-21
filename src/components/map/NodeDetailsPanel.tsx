@@ -238,7 +238,14 @@ export function NodeDetailsPanel({
   const renderLoadingIndicator = () => (
     <div className="mt-3 flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-gray-400">
       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-400" />
-      <span>AI 正在生成...</span>
+      <span className="flex items-center gap-2">
+        <span>AI 正在生成</span>
+        <span className="flex items-center gap-1">
+          <span className="h-1 w-1 animate-pulse rounded-full bg-gray-400" style={{ animationDelay: "0ms" }} />
+          <span className="h-1 w-1 animate-pulse rounded-full bg-gray-400" style={{ animationDelay: "150ms" }} />
+          <span className="h-1 w-1 animate-pulse rounded-full bg-gray-400" style={{ animationDelay: "300ms" }} />
+        </span>
+      </span>
     </div>
   );
 
