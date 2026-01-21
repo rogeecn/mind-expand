@@ -9,6 +9,9 @@ input:
     current_node: string
     strategy: string
     intensity: integer
+    history:
+      - role: string
+        content: string
 output:
   schema:
     strategy_name: string
@@ -43,8 +46,16 @@ output:
 - Lv 3-4: 侧重于逻辑推演和关联，语气客观专业。
 - Lv 5: 侧重于批判性思维和本质揭露，语言犀利、不留情面，必须指出用户可能忽视的“残酷真相”。
 
+{{#if history}}
+# Conversation Context
+这是最近的对话历史，请参考上下文进行连贯的回答，但仍需保持结构化输出：
+{{#each history}}
+- **{{role}}**: {{content}}
+{{/each}}
+{{/if}}
+
 # Execution Process (Internal Monologue)
-1. Context Check: 确保分析不脱离 {{full_path}}。
+1. Context Check: 确保分析不脱离 {{full_path}}。如果存在对话历史，优先回应用户的最新疑问，同时结合策略视角。
 2. Strategy Alignment: 严格执行 {{strategy}} 对应的思考路径。
 3. Insight Extraction: 提炼出那个让用户感到“原来如此”的瞬间。
 4. Refinement: 剔除 AI 常见的废话，确保每一个字符都带有逻辑密度。

@@ -157,14 +157,29 @@ export function NodeDetailsPanel({
   }) => {
     const fullPath =
       pathContext.length > 1 ? pathContext.slice(0, -1).join(" -> ") : pathContext[0] ?? node.title;
-    const currentNode = payload.question
-      ? `${node.title}（用户提问：${payload.question}）`
-      : node.title;
+    
+    // Fetch recent history from DB to ensure we have the latest user message
+    const recentMessages = await db.chatMessages
+      .where("[topicId+nodeId]")
+      .equals([node.topicId, node.id])
+      .sortBy("createdAt");
+    
+    // Take last 10 messages for context, format for API
+    const history = recentMessages.slice(-10).map(msg => ({
+      role: msg.role,
+      content: msg.content
+    }));
+
+    // If we have a question/history, we don't need to append the question to the node title
+    // The AI will see the user's last message in the history
+    const currentNode = node.title;
+
     const response = await expandChatAction({
       full_path: fullPath,
       current_node: currentNode,
       strategy: payload.strategy,
-      intensity: payload.intensity
+      intensity: payload.intensity,
+      history
     });
     const assistantMessage = createChatMessage({
       topicId: node.topicId,

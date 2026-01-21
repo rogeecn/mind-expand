@@ -21,7 +21,15 @@ const ExpandChatInputSchema = z.object({
   full_path: z.string(),
   current_node: z.string(),
   strategy: StrategySchema,
-  intensity: z.number().min(1).max(5)
+  intensity: z.number().min(1).max(5),
+  history: z
+    .array(
+      z.object({
+        role: z.string(),
+        content: z.string()
+      })
+    )
+    .optional()
 });
 
 const ExpandChatOutputSchema = z.object({
@@ -69,6 +77,7 @@ export async function expandChatAction(input: z.infer<typeof ExpandChatInputSche
       current_node: string;
       strategy: z.infer<typeof StrategySchema>;
       intensity: number;
+      history?: { role: string; content: string }[];
     },
     options: { model: string; output: { schema: typeof ExpandChatOutputSchema } }
   ) => Promise<{ output: z.infer<typeof ExpandChatOutputSchema> }>;
@@ -76,7 +85,8 @@ export async function expandChatAction(input: z.infer<typeof ExpandChatInputSche
     full_path: parsed.full_path,
     current_node: parsed.current_node,
     strategy: parsed.strategy,
-    intensity: parsed.intensity
+    intensity: parsed.intensity,
+    history: parsed.history
   };
   console.info("[ai:deep-analysis] request", {
     model: modelRefName,
