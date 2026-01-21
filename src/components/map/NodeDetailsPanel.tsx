@@ -367,7 +367,7 @@ export function NodeDetailsPanel({
               </button>
             ))}
           </div>
-          <div className="rounded-sm border border-gray-200 bg-[#FCFCFA] px-3 py-1.5 shadow-[inset_0_1px_0_rgba(0,0,0,0.04)]">
+          <div className="rounded-sm border border-gray-200 bg-[#FCFCFA] px-3 py-1.5 leading-none shadow-[inset_0_1px_0_rgba(0,0,0,0.04)]">
             <textarea
               ref={textareaRef}
               value={draft}
@@ -375,7 +375,7 @@ export function NodeDetailsPanel({
               onKeyDown={handleKeyDown}
               placeholder="输入你的问题"
               rows={1}
-              className="min-h-[32px] w-full resize-none bg-transparent text-sm text-gray-700 outline-none"
+              className="w-full resize-none bg-transparent text-sm text-gray-700 outline-none"
             />
           </div>
         </div>
