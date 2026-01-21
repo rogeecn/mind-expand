@@ -2,21 +2,21 @@
 model: mind-expand/gpt-4o-mini
 input:
   schema:
-    rootKeyword: string
+    root_keyword: string
 output:
   schema:
-    potentialContexts: array(object({
-      contextName: string
-      description: string
-      keyTerms: array(string)
-    }))
+    potential_contexts:
+      - context_name: string
+        description: string
+        key_terms:
+          - string
 ---
 
 # Role
 你是一位精通本体论与语义分析的专家。
 
 # Task
-用户输入了一个可能存在多重含义或广泛定义的关键词：“{{rootKeyword}}”。
+用户输入了一个可能存在多重含义或广泛定义的关键词：“{{root_keyword}}”。
 请识别该词在不同语义空间、学科领域或应用场景下的具体解释。
 
 # Constraints
@@ -24,5 +24,11 @@ output:
 2. 深度挖掘：不仅列出词典定义，还要列出其在现代语境、行业语境中的特殊含义。
 3. 输出要求：请直接返回结构化 JSON。
 
+# Example
+如果输入 "苹果":
+- 背景1: 消费电子 (科技公司, iPhone, 生态系统)
+- 背景2: 植物学 (水果, 蔷薇科, 种植)
+- 背景3: 象征意义 (引力/牛顿, 禁果/宗教, 曼哈顿/纽约)
+
 # Output
-仅返回 JSON，字段: potentialContexts。
+仅返回 JSON，字段: potential_contexts。

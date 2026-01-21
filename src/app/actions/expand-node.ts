@@ -46,7 +46,19 @@ export async function expandNodeAction(input: z.infer<typeof ExpandInputSchema>)
     ? parsed.existingChildren.join(", ")
     : "无";
 
-  console.log("[expand-node] context", parsed);
+  const payload = {
+    rootTopic: parsed.rootTopic,
+    topicConstraints: parsed.topicDescription || parsed.rootTopic,
+    pathSummary,
+    currentNode,
+    existingChildrenSummary,
+    count: parsed.count
+  };
+  console.info("[ai:expand-node] request", {
+    model: modelRefName,
+    prompt: "expand-node",
+    input: payload
+  });
 
   const prompt = ai.prompt("expand-node") as (
     input: {
@@ -60,21 +72,14 @@ export async function expandNodeAction(input: z.infer<typeof ExpandInputSchema>)
     options: { model: string; output: { schema: typeof ExpandOutputSchema } }
   ) => Promise<{ output: z.infer<typeof ExpandOutputSchema> }>;
   const response = await prompt(
-    {
-      rootTopic: parsed.rootTopic,
-      topicConstraints: parsed.topicDescription || parsed.rootTopic,
-      pathSummary,
-      currentNode,
-      existingChildrenSummary,
-      count: parsed.count
-    },
+    payload,
     {
       model: modelRefName,
       output: { schema: ExpandOutputSchema }
     }
   );
 
-  console.log("[expand-node] output", response.output);
+  console.info("[ai:expand-node] response", response.output);
 
   return ExpandOutputSchema.parse(response.output);
 }

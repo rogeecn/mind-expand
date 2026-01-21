@@ -9,26 +9,46 @@ import { db, type ChatMessageRecord, type NodeRecord } from "@/lib/db";
 import { expandChatAction } from "@/app/actions/expand-chat";
 import { createId } from "@/lib/uuid";
 
-type PromptType = "direct" | "cause" | "counter" | "timeline" | "analogy";
+type StrategyType =
+  | "structural"
+  | "causal"
+  | "inverse"
+  | "evolutionary"
+  | "analogical"
+  | "first_principles"
+  | "stakeholder"
+  | "second_order"
+  | "constraints"
+  | "systems";
 
 type ChatDisplayMessage = ChatMessageRecord & {
   sourceLabel?: string;
 };
 
-const PROMPT_TABS: { type: PromptType; label: string }[] = [
-  { type: "direct", label: "直接拆分" },
-  { type: "cause", label: "因果链条" },
-  { type: "counter", label: "反向视角" },
-  { type: "timeline", label: "时间演化" },
-  { type: "analogy", label: "类比联想" }
+const PROMPT_TABS: { type: StrategyType; label: string }[] = [
+  { type: "structural", label: "直接拆分" },
+  { type: "causal", label: "因果链条" },
+  { type: "inverse", label: "反向视角" },
+  { type: "evolutionary", label: "时间演化" },
+  { type: "analogical", label: "类比联想" },
+  { type: "first_principles", label: "第一性原理" },
+  { type: "stakeholder", label: "利益博弈" },
+  { type: "second_order", label: "第二级效应" },
+  { type: "constraints", label: "极限测试" },
+  { type: "systems", label: "系统反馈" }
 ];
 
-const PROMPT_LABELS: Record<PromptType, string> = {
-  direct: "直接拆分",
-  cause: "因果链条",
-  counter: "反向视角",
-  timeline: "时间演化",
-  analogy: "类比联想"
+const PROMPT_LABELS: Record<StrategyType, string> = {
+  structural: "直接拆分",
+  causal: "因果链条",
+  inverse: "反向视角",
+  evolutionary: "时间演化",
+  analogical: "类比联想",
+  first_principles: "第一性原理",
+  stakeholder: "利益博弈",
+  second_order: "第二级效应",
+  constraints: "极限测试",
+  systems: "系统反馈"
 };
 
 const DEFAULT_SOURCE_LABEL = "自由提问";
@@ -39,23 +59,38 @@ const createChatMessage = (message: Omit<ChatMessageRecord, "id" | "createdAt">)
   createdAt: Date.now()
 });
 
+const buildAssistantMarkdown = (response: {
+  core_insight: string;
+  analysis_blocks: { title: string; content: string }[];
+  mental_model_tip: string;
+  further_questions: string[];
+}) => {
+  const blocks = response.analysis_blocks.map((block) => `### ${block.title}\n${block.content}`);
+  const questions = response.further_questions.map((item) => `- ${item}`).join("\n");
+  return [
+    `**${response.core_insight}**`,
+    ...blocks,
+    response.mental_model_tip ? `> ${response.mental_model_tip}` : null,
+    response.further_questions.length > 0 ? `后续问题:\n${questions}` : null
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+};
+
+
 type NodeDetailsPanelProps = {
   node: NodeRecord;
-  rootTopic: string;
-  topicConstraints: string;
   pathContext: string[];
   onClose: () => void;
 };
 
 export function NodeDetailsPanel({
   node,
-  rootTopic,
-  topicConstraints,
   pathContext,
   onClose
 }: NodeDetailsPanelProps) {
   const [expanded, setExpanded] = useState(false);
-  const [activePrompt, setActivePrompt] = useState<PromptType | null>(null);
+  const [activePrompt, setActivePrompt] = useState<StrategyType | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +131,8 @@ export function NodeDetailsPanel({
     });
   }, [messages]);
 
+  const selectedStrategy = activePrompt ?? "structural";
+
   const lastUserMessageId = useMemo(() => {
     const lastUser = [...(displayMessages ?? [])].reverse().find((message) => message.role === "user");
     return lastUser?.id ?? null;
@@ -113,26 +150,32 @@ export function NodeDetailsPanel({
     await db.chatMessages.delete(messageId);
   };
 
-  const sendAssistantReply = async (payload: { message?: string; promptType?: PromptType }) => {
+  const sendAssistantReply = async (payload: {
+    strategy: StrategyType;
+    intensity: number;
+    question?: string;
+  }) => {
+    const fullPath =
+      pathContext.length > 1 ? pathContext.slice(0, -1).join(" -> ") : pathContext[0] ?? node.title;
+    const currentNode = payload.question
+      ? `${node.title}（用户提问：${payload.question}）`
+      : node.title;
     const response = await expandChatAction({
-      rootTopic,
-      topicDescription: topicConstraints,
-      pathContext,
-      nodeTitle: node.title,
-      nodeDescription: node.description,
-      message: payload.message,
-      promptType: payload.promptType
+      full_path: fullPath,
+      current_node: currentNode,
+      strategy: payload.strategy,
+      intensity: payload.intensity
     });
     const assistantMessage = createChatMessage({
       topicId: node.topicId,
       nodeId: node.id,
       role: "assistant",
-      content: response.reply
+      content: buildAssistantMarkdown(response)
     });
     await db.chatMessages.put(assistantMessage);
   };
 
-  const handleSendPrompt = async (promptType: PromptType) => {
+  const handleSendPrompt = async (promptType: StrategyType) => {
     if (isLoading) return;
     setActivePrompt(promptType);
     setIsLoading(true);
@@ -146,7 +189,8 @@ export function NodeDetailsPanel({
     });
     await db.chatMessages.put(userMessage);
     try {
-      await sendAssistantReply({ promptType });
+      const depth = Math.min(pathContext.length + 1, 5);
+      await sendAssistantReply({ strategy: promptType, intensity: depth });
     } catch (requestError) {
       console.error("Failed to generate chat reply", requestError);
       setError("生成失败，请重试。");
@@ -171,7 +215,8 @@ export function NodeDetailsPanel({
     });
     await db.chatMessages.put(userMessage);
     try {
-      await sendAssistantReply({ message: trimmed });
+      const depth = Math.min(pathContext.length + 1, 5);
+      await sendAssistantReply({ strategy: selectedStrategy, intensity: depth, question: trimmed });
     } catch (requestError) {
       console.error("Failed to generate chat reply", requestError);
       setError("生成失败，请重试。");
@@ -195,6 +240,10 @@ export function NodeDetailsPanel({
       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-400" />
       <span>AI 正在生成...</span>
     </div>
+  );
+
+  const renderErrorIndicator = (message: string) => (
+    <p className="mt-3 text-xs text-amber-600">{message}</p>
   );
 
   return (
@@ -282,13 +331,15 @@ export function NodeDetailsPanel({
                       ) : (
                         <Markdown content={message.content} className={clsx("mt-2", contentClass)} />
                       )}
-                      {isLoading && isUser && message.id === lastUserMessageId && renderLoadingIndicator()}
+                        {isLoading && isUser && message.id === lastUserMessageId && renderLoadingIndicator()}
+                        {error && isUser && message.id === lastUserMessageId && renderErrorIndicator(error)}
+
                     </div>
                   );
                 })}
           </div>
         </div>
-        <div className="border-t border-gray-200 px-6 py-4">
+        <div className="border-t border-gray-200 px-6 py-6">
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               {PROMPT_TABS.map((tab) => (
@@ -318,7 +369,6 @@ export function NodeDetailsPanel({
               rows={1}
               className="min-h-[40px] w-full resize-none rounded-sm border border-gray-200 px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-black"
             />
-            {error && <p className="text-xs text-amber-600">{error}</p>}
           </div>
         </div>
       </div>

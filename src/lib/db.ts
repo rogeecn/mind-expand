@@ -46,7 +46,17 @@ export type ChatMessageRecord = {
   nodeId: string;
   role: "user" | "assistant";
   content: string;
-  promptType?: "direct" | "cause" | "counter" | "timeline" | "analogy";
+  promptType?:
+    | "structural"
+    | "causal"
+    | "inverse"
+    | "evolutionary"
+    | "analogical"
+    | "first_principles"
+    | "stakeholder"
+    | "second_order"
+    | "constraints"
+    | "systems";
   createdAt: number;
 };
 

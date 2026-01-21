@@ -81,21 +81,28 @@ export async function expandConceptAction(input: z.infer<typeof ExpandConceptInp
     },
     options: { model: string; output: { schema: typeof ExpandConceptOutputSchema } }
   ) => Promise<{ output: z.infer<typeof ExpandConceptOutputSchema> }>;
+  const payload = {
+    rootTopic: parsed.rootTopic,
+    topicConstraints: parsed.topicDescription || parsed.rootTopic,
+    pathSummary: parsed.pathContext.join(" -> "),
+    nodeTitle: parsed.nodeTitle,
+    nodeDescription: parsed.nodeDescription || parsed.topicDescription || "无",
+    promptLabel: promptLabelMap[parsed.promptType],
+    promptGuidance: promptGuidanceMap[parsed.promptType].join(" ")
+  };
+  console.info("[ai:expand-concept] request", {
+    model: modelRefName,
+    prompt: "expand-concept",
+    input: payload
+  });
   const response = await prompt(
-    {
-      rootTopic: parsed.rootTopic,
-      topicConstraints: parsed.topicDescription || parsed.rootTopic,
-      pathSummary: parsed.pathContext.join(" -> "),
-      nodeTitle: parsed.nodeTitle,
-      nodeDescription: parsed.nodeDescription || parsed.topicDescription || "无",
-      promptLabel: promptLabelMap[parsed.promptType],
-      promptGuidance: promptGuidanceMap[parsed.promptType].join(" ")
-    },
+    payload,
     {
       model: modelRefName,
       output: { schema: ExpandConceptOutputSchema }
     }
   );
+  console.info("[ai:expand-concept] response", response.output);
 
   return ExpandConceptOutputSchema.parse(response.output);
 }

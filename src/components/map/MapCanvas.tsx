@@ -555,8 +555,6 @@ export function MapCanvas({ topicId }: { topicId: string }) {
       {selectedNode && topic && (
         <NodeDetailsPanel
           node={selectedNode}
-          rootTopic={topic.rootKeyword}
-          topicConstraints={topic.globalConstraints || topic.description}
           pathContext={pathContext}
           onClose={() => setSelectedNodeId(null)}
         />

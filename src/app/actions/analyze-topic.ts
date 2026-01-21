@@ -5,29 +5,29 @@ import { genkit } from "genkit";
 import { z } from "zod";
 
 const DisambiguationInputSchema = z.object({
-  rootKeyword: z.string()
+  root_keyword: z.string()
 });
 
 const DisambiguationOutputSchema = z.object({
-  potentialContexts: z.array(
+  potential_contexts: z.array(
     z.object({
-      contextName: z.string(),
+      context_name: z.string(),
       description: z.string(),
-      keyTerms: z.array(z.string())
+      key_terms: z.array(z.string())
     })
   )
 });
 
 const ConsolidationInputSchema = z.object({
-  rootKeyword: z.string(),
-  selectedContexts: z.array(z.string())
+  root_keyword: z.string(),
+  selected_contexts: z.array(z.string())
 });
 
 const ConsolidationOutputSchema = z.object({
-  masterTitle: z.string(),
-  masterDescription: z.string(),
-  globalConstraints: z.string(),
-  suggestedFocus: z.array(z.string())
+  master_title: z.string(),
+  master_description: z.string().max(260),
+  global_constraints: z.string(),
+  suggested_focus: z.array(z.string())
 });
 
 const pluginName = "mind-expand";
@@ -52,16 +52,23 @@ type RootConsolidationResult = z.infer<typeof ConsolidationOutputSchema>;
 export async function rootDisambiguationAction(input: z.infer<typeof DisambiguationInputSchema>) {
   const parsed = DisambiguationInputSchema.parse(input);
   const prompt = ai.prompt("root-disambiguation") as (
-    payload: { rootKeyword: string },
+    payload: { root_keyword: string },
     options: { model: string; output: { schema: typeof DisambiguationOutputSchema } }
   ) => Promise<{ output: RootDisambiguationResult }>;
+  const payload = { root_keyword: parsed.root_keyword };
+  console.info("[ai:root-disambiguation] request", {
+    model: modelRefName,
+    prompt: "root-disambiguation",
+    input: payload
+  });
   const response = await prompt(
-    { rootKeyword: parsed.rootKeyword },
+    payload,
     {
       model: modelRefName,
       output: { schema: DisambiguationOutputSchema }
     }
   );
+  console.info("[ai:root-disambiguation] response", response.output);
 
   return DisambiguationOutputSchema.parse(response.output);
 }
@@ -69,19 +76,26 @@ export async function rootDisambiguationAction(input: z.infer<typeof Disambiguat
 export async function rootConsolidationAction(input: z.infer<typeof ConsolidationInputSchema>) {
   const parsed = ConsolidationInputSchema.parse(input);
   const prompt = ai.prompt("root-consolidation") as (
-    payload: { rootKeyword: string; selectedContexts: string },
+    payload: { root_keyword: string; selected_contexts: string[] },
     options: { model: string; output: { schema: typeof ConsolidationOutputSchema } }
   ) => Promise<{ output: RootConsolidationResult }>;
+  const payload = {
+    root_keyword: parsed.root_keyword,
+    selected_contexts: parsed.selected_contexts
+  };
+  console.info("[ai:root-consolidation] request", {
+    model: modelRefName,
+    prompt: "root-consolidation",
+    input: payload
+  });
   const response = await prompt(
-    {
-      rootKeyword: parsed.rootKeyword,
-      selectedContexts: parsed.selectedContexts.join("\n")
-    },
+    payload,
     {
       model: modelRefName,
       output: { schema: ConsolidationOutputSchema }
     }
   );
+  console.info("[ai:root-consolidation] response", response.output);
 
   return ConsolidationOutputSchema.parse(response.output);
 }

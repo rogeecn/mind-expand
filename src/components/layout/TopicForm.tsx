@@ -36,14 +36,14 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
     if (!rootKeyword.trim()) return;
     setIsAnalyzing(true);
     try {
-      const result = await rootDisambiguationAction({ rootKeyword: rootKeyword.trim() });
-      const options = result.potentialContexts.map((item) => item.contextName);
-      const descriptionMap = result.potentialContexts.reduce<Record<string, string>>((acc, item) => {
-        acc[item.contextName] = item.description;
+      const result = await rootDisambiguationAction({ root_keyword: rootKeyword.trim() });
+      const options = result.potential_contexts.map((item) => item.context_name);
+      const descriptionMap = result.potential_contexts.reduce<Record<string, string>>((acc, item) => {
+        acc[item.context_name] = item.description;
         return acc;
       }, {});
-      const keyTermsMap = result.potentialContexts.reduce<Record<string, string[]>>((acc, item) => {
-        acc[item.contextName] = item.keyTerms;
+      const keyTermsMap = result.potential_contexts.reduce<Record<string, string[]>>((acc, item) => {
+        acc[item.context_name] = item.key_terms;
         return acc;
       }, {});
       setSenseOptions(options);
@@ -63,20 +63,14 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
     if (!rootKeyword.trim() || selectedSenses.length === 0) return;
     setIsConfirming(true);
     try {
-      const selectedContexts = selectedSenses.map((sense) => {
-        const descriptionText = senseDescriptions[sense] ?? "";
-        const keyTerms = senseKeyTerms[sense] ?? [];
-        const suffix = keyTerms.length > 0 ? ` (关键词: ${keyTerms.join("、")})` : "";
-        return `${sense}: ${descriptionText}${suffix}`.trim();
-      });
       const result = await rootConsolidationAction({
-        rootKeyword: rootKeyword.trim(),
-        selectedContexts
+        root_keyword: rootKeyword.trim(),
+        selected_contexts: selectedSenses
       });
-      setDescription(result.masterDescription ?? "");
-      setMasterTitle(result.masterTitle);
-      setGlobalConstraints(result.globalConstraints);
-      setSuggestedFocus(result.suggestedFocus ?? []);
+      setDescription(result.master_description ?? "");
+      setMasterTitle(result.master_title);
+      setGlobalConstraints(result.global_constraints);
+      setSuggestedFocus(result.suggested_focus ?? []);
     } finally {
       setIsConfirming(false);
     }
