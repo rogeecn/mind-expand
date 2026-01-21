@@ -4,7 +4,7 @@ import {
   rootConsolidationAction,
   rootDisambiguationAction
 } from "@/app/actions/analyze-topic";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type TopicFormValues = {
   rootKeyword: string;
@@ -24,7 +24,7 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
   const [description, setDescription] = useState("");
   const [masterTitle, setMasterTitle] = useState<string | undefined>();
   const [globalConstraints, setGlobalConstraints] = useState<string | undefined>();
-  const [suggestedFocus, setSuggestedFocus] = useState<string[]>([]);
+  const [suggestedFocusText, setSuggestedFocusText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -32,6 +32,9 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
   const [senseDescriptions, setSenseDescriptions] = useState<Record<string, string>>({});
   const [senseKeyTerms, setSenseKeyTerms] = useState<Record<string, string[]>>({});
   const [selectedSenses, setSelectedSenses] = useState<string[]>([]);
+  const descriptionRef = useRef<HTMLTextAreaElement | null>(null);
+  const constraintsRef = useRef<HTMLTextAreaElement | null>(null);
+  const focusRef = useRef<HTMLTextAreaElement | null>(null);
 
   const handleAnalyze = async () => {
     if (!rootKeyword.trim()) return;
@@ -54,7 +57,7 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
       setDescription("");
       setMasterTitle(undefined);
       setGlobalConstraints(undefined);
-      setSuggestedFocus([]);
+      setSuggestedFocusText("");
     } finally {
       setIsAnalyzing(false);
     }
@@ -71,7 +74,7 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
       setDescription(result.master_description ?? "");
       setMasterTitle(result.master_title);
       setGlobalConstraints(result.global_constraints);
-      setSuggestedFocus(result.suggested_focus ?? []);
+      setSuggestedFocusText((result.suggested_focus ?? []).join("\n"));
     } finally {
       setIsConfirming(false);
     }
@@ -85,15 +88,19 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
     setSelectedSenses([]);
     setMasterTitle(undefined);
     setGlobalConstraints(undefined);
-    setSuggestedFocus([]);
+    setSuggestedFocusText("");
   };
 
   const handleCreateTopic = () => {
     if (isAnalyzing || isConfirming || isCreating) return;
+    const parsedSuggestedFocus = suggestedFocusText
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean);
     const combinedDescription = [
       description.trim(),
       globalConstraints ? `\n\n约束范围：\n${globalConstraints}` : "",
-      suggestedFocus.length > 0 ? `\n\n建议方向：\n- ${suggestedFocus.join("\n- ")}` : ""
+      parsedSuggestedFocus.length > 0 ? `\n\n建议方向：\n- ${parsedSuggestedFocus.join("\n- ")}` : ""
     ]
       .join("")
       .trim();
@@ -105,11 +112,29 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
         description: combinedDescription,
         masterTitle,
         globalConstraints,
-        suggestedFocus
+        suggestedFocus: parsedSuggestedFocus
       })
     ).finally(() => setIsCreating(false));
   };
 
+  const resizeTextarea = (element: HTMLTextAreaElement | null) => {
+    if (!element) return;
+    element.style.height = "auto";
+    element.style.height = `${element.scrollHeight}px`;
+    element.style.overflowY = "hidden";
+  };
+
+  useEffect(() => {
+    resizeTextarea(descriptionRef.current);
+  }, [description]);
+
+  useEffect(() => {
+    resizeTextarea(constraintsRef.current);
+  }, [globalConstraints]);
+
+  useEffect(() => {
+    resizeTextarea(focusRef.current);
+  }, [suggestedFocusText]);
 
   const hasAnalyzed = senseOptions.length > 0;
 
@@ -129,7 +154,7 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
                   setDescription("");
                   setMasterTitle(undefined);
                   setGlobalConstraints(undefined);
-                  setSuggestedFocus([]);
+                  setSuggestedFocusText("");
                 }}
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-black hover:text-black"
                 title="重新开始"
@@ -231,29 +256,50 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
           </section>
         )}
 
-        {globalConstraints && description && (
+        {(globalConstraints || description || masterTitle || suggestedFocusText.length > 0) && (
           <section className="space-y-8">
-            <div className="border-b border-gray-200 pb-6">
+            <div className="space-y-3">
+              <p className="text-[11px] uppercase tracking-[0.3em] text-gray-500">主标题</p>
+              <input
+                value={masterTitle ?? ""}
+                onChange={(event) => setMasterTitle(event.target.value)}
+                placeholder="输入主标题"
+                className="w-full rounded-sm border border-gray-300 bg-white px-3 py-2 text-base text-ink focus:border-black focus:outline-none"
+              />
+            </div>
+            <div className="space-y-3">
               <p className="text-[11px] uppercase tracking-[0.3em] text-gray-500">主旨描述</p>
-              <p className="mt-4 text-base text-gray-800">{description}</p>
+              <textarea
+                ref={descriptionRef}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="补充主旨描述"
+                rows={1}
+                className="w-full resize-none rounded-sm border border-gray-300 bg-white px-3 py-2 text-base text-gray-800 focus:border-black focus:outline-none"
+              />
             </div>
-            <div>
+            <div className="space-y-3">
               <p className="text-[11px] uppercase tracking-[0.3em] text-gray-500">方向性约束</p>
-              <p className="mt-4 text-sm text-gray-600">{globalConstraints}</p>
+              <textarea
+                ref={constraintsRef}
+                value={globalConstraints ?? ""}
+                onChange={(event) => setGlobalConstraints(event.target.value)}
+                placeholder="补充约束或范围"
+                rows={1}
+                className="w-full resize-none rounded-sm border border-gray-300 bg-white px-3 py-2 focus:border-black focus:outline-none"
+              />
             </div>
-            {suggestedFocus.length > 0 && (
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.3em] text-gray-500">建议方向</p>
-                <ul className="mt-3 space-y-2 text-sm text-gray-600">
-                  {suggestedFocus.map((item) => (
-                    <li key={item} className="flex items-start gap-2">
-                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-gray-400" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <div className="space-y-3">
+              <p className="text-[11px] uppercase tracking-[0.3em] text-gray-500">建议方向</p>
+              <textarea
+                ref={focusRef}
+                value={suggestedFocusText}
+                onChange={(event) => setSuggestedFocusText(event.target.value)}
+                placeholder="每行一条建议方向"
+                rows={1}
+                className="w-full resize-none rounded-sm border border-gray-300 bg-white px-3 py-2 focus:border-black focus:outline-none"
+              />
+            </div>
             <div className="flex items-center justify-between border-t border-gray-200 pt-6">
               {isCreating && (
                 <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-gray-400">
