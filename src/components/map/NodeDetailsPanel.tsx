@@ -42,6 +42,7 @@ const createChatMessage = (message: Omit<ChatMessageRecord, "id" | "createdAt">)
 type NodeDetailsPanelProps = {
   node: NodeRecord;
   rootTopic: string;
+  topicConstraints: string;
   pathContext: string[];
   onClose: () => void;
 };
@@ -49,6 +50,7 @@ type NodeDetailsPanelProps = {
 export function NodeDetailsPanel({
   node,
   rootTopic,
+  topicConstraints,
   pathContext,
   onClose
 }: NodeDetailsPanelProps) {
@@ -114,6 +116,7 @@ export function NodeDetailsPanel({
   const sendAssistantReply = async (payload: { message?: string; promptType?: PromptType }) => {
     const response = await expandChatAction({
       rootTopic,
+      topicDescription: topicConstraints,
       pathContext,
       nodeTitle: node.title,
       nodeDescription: node.description,

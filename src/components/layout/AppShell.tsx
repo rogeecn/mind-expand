@@ -6,7 +6,7 @@ import { MapCanvas } from "@/components/map/MapCanvas";
 import { expandNodeAction } from "@/app/actions/expand-node";
 import { useTopic } from "@/hooks/useTopic";
 import { calculateChildPositions } from "@/lib/layout";
-import type { EdgeRecord, NodeRecord } from "@/lib/db";
+import type { EdgeRecord, NodeRecord, TopicRecord } from "@/lib/db";
 import { db } from "@/lib/db";
 import { createId } from "@/lib/uuid";
 import { PanelLeftOpen } from "lucide-react";
@@ -26,7 +26,7 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
   const [isCreating, setIsCreating] = useState(mode === "create");
   const [isReady, setIsReady] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const { createTopic, topic } = useTopic(activeTopicId);
+  const { topic } = useTopic(activeTopicId);
 
   useEffect(() => {
     setActiveTopicId(topicId ?? null);
@@ -54,29 +54,52 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
     router.push("/topic/new");
   };
 
-  const handleCreateSubmit = async ({ rootKeyword, description }: TopicFormValues) => {
-    if (!rootKeyword.trim()) return;
+  const handleCreateSubmit = async ({
+    rootKeyword,
+    description,
+    masterTitle,
+    globalConstraints,
+    suggestedFocus
+  }: TopicFormValues) => {
     const trimmedDescription = description.trim();
-    const newTopic = await createTopic(rootKeyword.trim(), trimmedDescription);
+    const now = Date.now();
+
+    const rootTitle = (masterTitle || rootKeyword).trim();
+    const newTopic: TopicRecord = {
+      id: createId(),
+      rootKeyword: rootTitle,
+      description: trimmedDescription || "Root topic",
+      globalConstraints,
+      masterTitle,
+      suggestedFocus,
+      styleConfig: {
+        edgeStyle: "bezier",
+        nodeStyle: "nyt"
+      },
+      createdAt: now,
+      updatedAt: now
+    };
+
     const rootNode: NodeRecord = {
       id: createId(),
       topicId: newTopic.id,
       parentId: null,
-      title: newTopic.rootKeyword,
-      description: trimmedDescription || "Root topic",
+      title: rootTitle,
+      description: newTopic.description,
       x: 0,
       y: 0,
       nodeStyle: newTopic.styleConfig.nodeStyle,
       colorTag: null,
-      createdAt: Date.now()
+      createdAt: now
     };
 
+    await db.topics.put(newTopic);
     await db.nodes.put(rootNode);
 
     try {
       const response = await expandNodeAction({
         rootTopic: newTopic.rootKeyword,
-        topicDescription: newTopic.description,
+        topicDescription: newTopic.globalConstraints || newTopic.description,
         pathContext: [newTopic.rootKeyword],
         existingChildren: [],
         count: 6

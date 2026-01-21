@@ -1,11 +1,17 @@
 "use client";
 
-import { analyzeTopicAction } from "@/app/actions/analyze-topic";
+import {
+  rootConsolidationAction,
+  rootDisambiguationAction
+} from "@/app/actions/analyze-topic";
 import { useState } from "react";
 
 export type TopicFormValues = {
   rootKeyword: string;
   description: string;
+  masterTitle?: string;
+  globalConstraints?: string;
+  suggestedFocus?: string[];
 };
 
 type TopicFormProps = {
@@ -16,25 +22,38 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
 
   const [rootKeyword, setRootKeyword] = useState("");
   const [description, setDescription] = useState("");
+  const [masterTitle, setMasterTitle] = useState<string | undefined>();
+  const [globalConstraints, setGlobalConstraints] = useState<string | undefined>();
+  const [suggestedFocus, setSuggestedFocus] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [senseOptions, setSenseOptions] = useState<string[]>([]);
+  const [senseDescriptions, setSenseDescriptions] = useState<Record<string, string>>({});
+  const [senseKeyTerms, setSenseKeyTerms] = useState<Record<string, string[]>>({});
   const [selectedSenses, setSelectedSenses] = useState<string[]>([]);
 
   const handleAnalyze = async () => {
     if (!rootKeyword.trim()) return;
     setIsAnalyzing(true);
     try {
-      const result = await analyzeTopicAction({ rootTopic: rootKeyword.trim() });
-      if (result.isAmbiguous) {
-        setSenseOptions(result.senseOptions);
-        setSelectedSenses([]);
-        setDescription("");
-      } else {
-        setSenseOptions([]);
-        setSelectedSenses([]);
-        setDescription(result.constraints ?? "");
-      }
+      const result = await rootDisambiguationAction({ rootKeyword: rootKeyword.trim() });
+      const options = result.potentialContexts.map((item) => item.contextName);
+      const descriptionMap = result.potentialContexts.reduce<Record<string, string>>((acc, item) => {
+        acc[item.contextName] = item.description;
+        return acc;
+      }, {});
+      const keyTermsMap = result.potentialContexts.reduce<Record<string, string[]>>((acc, item) => {
+        acc[item.contextName] = item.keyTerms;
+        return acc;
+      }, {});
+      setSenseOptions(options);
+      setSenseDescriptions(descriptionMap);
+      setSenseKeyTerms(keyTermsMap);
+      setSelectedSenses([]);
+      setDescription("");
+      setMasterTitle(undefined);
+      setGlobalConstraints(undefined);
+      setSuggestedFocus([]);
     } finally {
       setIsAnalyzing(false);
     }
@@ -44,11 +63,20 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
     if (!rootKeyword.trim() || selectedSenses.length === 0) return;
     setIsConfirming(true);
     try {
-      const result = await analyzeTopicAction({
-        rootTopic: rootKeyword.trim(),
-        selectedSenses
+      const selectedContexts = selectedSenses.map((sense) => {
+        const descriptionText = senseDescriptions[sense] ?? "";
+        const keyTerms = senseKeyTerms[sense] ?? [];
+        const suffix = keyTerms.length > 0 ? ` (关键词: ${keyTerms.join("、")})` : "";
+        return `${sense}: ${descriptionText}${suffix}`.trim();
       });
-      setDescription(result.constraints ?? "");
+      const result = await rootConsolidationAction({
+        rootKeyword: rootKeyword.trim(),
+        selectedContexts
+      });
+      setDescription(result.masterDescription ?? "");
+      setMasterTitle(result.masterTitle);
+      setGlobalConstraints(result.globalConstraints);
+      setSuggestedFocus(result.suggestedFocus ?? []);
     } finally {
       setIsConfirming(false);
     }
@@ -57,14 +85,26 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
   const handleRootChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRootKeyword(event.target.value);
     setSenseOptions([]);
+    setSenseDescriptions({});
+    setSenseKeyTerms({});
     setSelectedSenses([]);
+    setMasterTitle(undefined);
+    setGlobalConstraints(undefined);
+    setSuggestedFocus([]);
   };
 
   const handleCreateTopic = () => {
     if (isAnalyzing || isConfirming) return;
     setIsConfirming(true);
-    Promise.resolve(onSubmit({ rootKeyword, description }))
-      .finally(() => setIsConfirming(false));
+    Promise.resolve(
+      onSubmit({
+        rootKeyword,
+        description,
+        masterTitle,
+        globalConstraints,
+        suggestedFocus
+      })
+    ).finally(() => setIsConfirming(false));
   };
 
   const handleDescriptionChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -119,31 +159,42 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
               Select Scopes
             </label>
             <div className="grid gap-2">
-              {senseOptions.map((option) => (
-                <label
-                  key={option}
-                  className="flex cursor-pointer items-center gap-3 rounded-sm border border-gray-200 px-3 py-2 text-sm text-gray-600 transition hover:border-black hover:text-ink"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedSenses.includes(option)}
-                    onChange={(e) => {
-                      const isChecked = e.target.checked;
-                      let newSenses: string[];
+                {senseOptions.map((option) => (
+                  <label
+                    key={option}
+                    className="flex cursor-pointer items-start gap-3 rounded-sm border border-gray-200 px-3 py-3 text-sm text-gray-600 transition hover:border-black hover:text-ink"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedSenses.includes(option)}
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        let newSenses: string[];
 
-                      if (isChecked) {
-                        newSenses = [...selectedSenses, option];
-                      } else {
-                        newSenses = selectedSenses.filter((sense) => sense !== option);
-                      }
+                        if (isChecked) {
+                          newSenses = [...selectedSenses, option];
+                        } else {
+                          newSenses = selectedSenses.filter((sense) => sense !== option);
+                        }
 
-                      setSelectedSenses(newSenses);
-                    }}
-                    className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
-                  />
-                  <span>{option}</span>
-                </label>
-              ))}
+                        setSelectedSenses(newSenses);
+                      }}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+                    />
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-ink">{option}</p>
+                      {senseDescriptions[option] && (
+                        <p className="text-xs text-gray-500">{senseDescriptions[option]}</p>
+                      )}
+                      {senseKeyTerms[option]?.length ? (
+                        <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
+                          关键词: {senseKeyTerms[option].join(" · ")}
+                        </p>
+                      ) : null}
+                    </div>
+                  </label>
+                ))}
+
             </div>
             <div className="pt-1">
               <button
@@ -158,25 +209,58 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
           </div>
         )}
 
-        <div className="space-y-3">
-          <label
-            className="text-[11px] uppercase tracking-[0.3em] text-gray-500"
-            htmlFor="topic-description"
-          >
-            Description / Constraints
-          </label>
-          <textarea
-            id="topic-description"
-            name="topic-description"
-            value={description}
-            onChange={handleDescriptionChange}
-            placeholder="Describe the scope, assumptions, or exclusions for this topic"
-            className="min-h-[160px] w-full rounded-sm border border-gray-300 bg-white px-4 py-3 text-sm text-ink focus:border-black focus:outline-none"
-          />
-          {(isAnalyzing || isConfirming) && (
-            <p className="text-xs text-gray-400">AI 正在分析语义...</p>
-          )}
-        </div>
+         <div className="space-y-3">
+           <label
+             className="text-[11px] uppercase tracking-[0.3em] text-gray-500"
+             htmlFor="topic-description"
+           >
+             Master Description
+           </label>
+           <textarea
+             id="topic-description"
+             name="topic-description"
+             value={description}
+             onChange={handleDescriptionChange}
+             placeholder="Describe the scope, assumptions, or exclusions for this topic"
+             className="min-h-[160px] w-full rounded-sm border border-gray-300 bg-white px-4 py-3 text-sm text-ink focus:border-black focus:outline-none"
+           />
+           {(isAnalyzing || isConfirming) && (
+             <p className="text-xs text-gray-400">AI 正在分析语义...</p>
+           )}
+           {selectedSenses.length > 0 && (
+             <p className="text-xs text-gray-500">
+               已选择 {selectedSenses.length} 个语义，将生成主旨与全局约束。
+             </p>
+           )}
+         </div>
+         <div className="space-y-3">
+           <label className="text-[11px] uppercase tracking-[0.3em] text-gray-500">
+             Global Constraints
+           </label>
+           <div className="min-h-[120px] rounded-sm border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+             {globalConstraints || "等待生成全局约束。"}
+           </div>
+         </div>
+         <div className="space-y-3">
+           <label className="text-[11px] uppercase tracking-[0.3em] text-gray-500">
+             Suggested Focus
+           </label>
+           <div className="rounded-sm border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600">
+             {suggestedFocus.length > 0 ? (
+               <ul className="space-y-2">
+                 {suggestedFocus.map((item) => (
+                   <li key={item} className="flex items-start gap-2">
+                     <span className="mt-1 h-1.5 w-1.5 rounded-full bg-gray-400" />
+                     <span>{item}</span>
+                   </li>
+                 ))}
+               </ul>
+             ) : (
+               "等待生成建议方向。"
+             )}
+           </div>
+         </div>
+
 
         <div className="pt-2">
           <button

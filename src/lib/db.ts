@@ -9,6 +9,9 @@ export type TopicRecord = {
   id: string;
   rootKeyword: string;
   description: string;
+  globalConstraints?: string;
+  masterTitle?: string;
+  suggestedFocus?: string[];
   styleConfig: TopicStyle;
   createdAt: number;
   updatedAt: number;
@@ -98,6 +101,13 @@ class MindMapDatabase extends Dexie {
     });
 
     this.version(5).stores({
+      topics: "id, rootKeyword, updatedAt",
+      nodes: "id, topicId, parentId",
+      edges: "id, topicId, source",
+      chatMessages: "id, [topicId+nodeId], createdAt"
+    });
+
+    this.version(6).stores({
       topics: "id, rootKeyword, updatedAt",
       nodes: "id, topicId, parentId",
       edges: "id, topicId, source",

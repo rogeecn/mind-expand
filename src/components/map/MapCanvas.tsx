@@ -219,12 +219,11 @@ export function MapCanvas({ topicId }: { topicId: string }) {
       try {
         const response = await expandNodeAction({
           rootTopic: topic.rootKeyword,
-          topicDescription: topic.description,
+          topicDescription: topic.globalConstraints || topic.description,
           pathContext,
           existingChildren: existingChildren.map((child) => child.title),
           count
         });
-
 
         // 1. Create new nodes with temporary positions
         const newNodes: NodeRecord[] = response.nodes.map((nodeTitle: string) => ({
@@ -557,6 +556,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         <NodeDetailsPanel
           node={selectedNode}
           rootTopic={topic.rootKeyword}
+          topicConstraints={topic.globalConstraints || topic.description}
           pathContext={pathContext}
           onClose={() => setSelectedNodeId(null)}
         />

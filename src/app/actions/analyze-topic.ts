@@ -4,15 +4,30 @@ import openAI from "@genkit-ai/compat-oai";
 import { genkit } from "genkit";
 import { z } from "zod";
 
-const AnalyzeInputSchema = z.object({
-  rootTopic: z.string(),
-  selectedSenses: z.array(z.string()).optional()
+const DisambiguationInputSchema = z.object({
+  rootKeyword: z.string()
 });
 
-const AnalyzeOutputSchema = z.object({
-  senseOptions: z.array(z.string()),
-  constraints: z.string().nullable().optional(),
-  isAmbiguous: z.boolean()
+const DisambiguationOutputSchema = z.object({
+  potentialContexts: z.array(
+    z.object({
+      contextName: z.string(),
+      description: z.string(),
+      keyTerms: z.array(z.string())
+    })
+  )
+});
+
+const ConsolidationInputSchema = z.object({
+  rootKeyword: z.string(),
+  selectedContexts: z.array(z.string())
+});
+
+const ConsolidationOutputSchema = z.object({
+  masterTitle: z.string(),
+  masterDescription: z.string(),
+  globalConstraints: z.string(),
+  suggestedFocus: z.array(z.string())
 });
 
 const pluginName = "mind-expand";
@@ -20,6 +35,7 @@ const defaultModelName = process.env.MODEL_DEFAULT_ID ?? "gpt-4o-mini";
 const modelRefName = `${pluginName}/${defaultModelName}`;
 
 const ai = genkit({
+  promptDir: "./prompts",
   plugins: [
     openAI({
       name: pluginName,
@@ -29,36 +45,43 @@ const ai = genkit({
   ]
 });
 
-const analyzePrompt = ({
-  rootTopic,
-  selectedSenses
-}: z.infer<typeof AnalyzeInputSchema>) => {
-  if (selectedSenses && selectedSenses.length > 0) {
-    return [
-      "你是一名主题范围分析助手，必须使用中文回复。",
-      `主题: ${rootTopic}`,
-      `已选择语义: ${selectedSenses.join(", ")}`,
-      "输出1-2句中文约束说明，用于限定主题范围，避免歧义。",
-      "仅返回 JSON，字段: senseOptions(数组), constraints(字符串), isAmbiguous(布尔false)。"
-    ].join("\n");
-  }
+type RootDisambiguationResult = z.infer<typeof DisambiguationOutputSchema>;
 
-  return [
-    "你是一名主题范围分析助手，必须使用中文回复。",
-    `主题: ${rootTopic}`,
-    "如果存在语义歧义，请输出3-6个语义选项（中文短语），不要生成约束。",
-    "如果没有明显歧义，则输出1-2句中文约束说明。",
-    "仅返回 JSON，字段: senseOptions(数组), constraints(字符串, 可空), isAmbiguous(布尔)。"
-  ].join("\n");
-};
+type RootConsolidationResult = z.infer<typeof ConsolidationOutputSchema>;
 
-export async function analyzeTopicAction(input: z.infer<typeof AnalyzeInputSchema>) {
-  const parsed = AnalyzeInputSchema.parse(input);
-  const response = await ai.generate({
-    model: modelRefName,
-    prompt: analyzePrompt(parsed),
-    output: { schema: AnalyzeOutputSchema }
-  });
+export async function rootDisambiguationAction(input: z.infer<typeof DisambiguationInputSchema>) {
+  const parsed = DisambiguationInputSchema.parse(input);
+  const prompt = ai.prompt("root-disambiguation") as (
+    payload: { rootKeyword: string },
+    options: { model: string; output: { schema: typeof DisambiguationOutputSchema } }
+  ) => Promise<{ output: RootDisambiguationResult }>;
+  const response = await prompt(
+    { rootKeyword: parsed.rootKeyword },
+    {
+      model: modelRefName,
+      output: { schema: DisambiguationOutputSchema }
+    }
+  );
 
-  return AnalyzeOutputSchema.parse(response.output);
+  return DisambiguationOutputSchema.parse(response.output);
+}
+
+export async function rootConsolidationAction(input: z.infer<typeof ConsolidationInputSchema>) {
+  const parsed = ConsolidationInputSchema.parse(input);
+  const prompt = ai.prompt("root-consolidation") as (
+    payload: { rootKeyword: string; selectedContexts: string },
+    options: { model: string; output: { schema: typeof ConsolidationOutputSchema } }
+  ) => Promise<{ output: RootConsolidationResult }>;
+  const response = await prompt(
+    {
+      rootKeyword: parsed.rootKeyword,
+      selectedContexts: parsed.selectedContexts.join("\n")
+    },
+    {
+      model: modelRefName,
+      output: { schema: ConsolidationOutputSchema }
+    }
+  );
+
+  return ConsolidationOutputSchema.parse(response.output);
 }

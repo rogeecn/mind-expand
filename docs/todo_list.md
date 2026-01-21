@@ -23,15 +23,22 @@
   - [x] Export mind map JSON.
   - [x] Import JSON with validation.
 
-- [ ] **Planned: Node Details Chat (Confirmed)**
-  - [ ] Dexie 新增 `chat_messages` 表（`topicId + nodeId`, `role`, `content`, `promptType?`, `createdAt`）
-  - [ ] 新增 Server Action：`expand-chat`
+- [x] **Planned: Node Details Chat (Confirmed)**
+  - [x] Dexie 新增 `chat_messages` 表（`topicId + nodeId`, `role`, `content`, `promptType?`, `createdAt`）
+  - [x] 新增 Server Action：`expand-chat`
     - 输入：`rootTopic`, `pathContext`, `nodeTitle`, `nodeDescription`, `message?`, `promptType?`
     - 输出：纯文本 `reply`
-  - [ ] NodeDetailsPanel 改为聊天 UI
+  - [x] NodeDetailsPanel 改为聊天 UI
     - 预设按钮触发 user 消息（带 `promptType`）
     - 输入框 + 发送按钮
     - 消息列表（user / assistant），AI 回复显示来源标签
-  - [ ] 聊天记录持久化 & 删除同步 Dexie
-  - [ ] 上下文注入：root + path + node.title + node.description
-  - [ ] 消息列表：只追加、不提供清空
+  - [x] 聊天记录持久化 & 删除同步 Dexie
+  - [x] 上下文注入：root + path + node.title + node.description
+  - [x] 消息列表：只追加、不提供清空
+
+- [ ] **Planned: Root Topic Disambiguation & Consolidation**
+  - [ ] 新增 `root-disambiguation` 提示词（多语义拆解）
+  - [ ] 新增 `root-consolidation` 提示词（主旨与全局约束）
+  - [ ] TopicForm 调整为两步流程
+  - [ ] Topic 数据新增 `masterTitle`/`globalConstraints`/`suggestedFocus`
+  - [ ] 下游扩展注入 `globalConstraints`

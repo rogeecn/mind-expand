@@ -9,6 +9,7 @@ const PromptTypeSchema = z.enum(["direct", "cause", "counter", "timeline", "anal
 const ExpandChatInputSchema = z
   .object({
     rootTopic: z.string(),
+    topicDescription: z.string().optional(),
     pathContext: z.array(z.string()),
     nodeTitle: z.string(),
     nodeDescription: z.string(),
@@ -28,6 +29,7 @@ const pluginName = "mind-expand";
 const modelRefName = `${pluginName}/${defaultModelName}`;
 
 const ai = genkit({
+  promptDir: "./prompts",
   plugins: [
     openAI({
       name: pluginName,
@@ -62,36 +64,42 @@ const promptGuidanceMap: Record<z.infer<typeof PromptTypeSchema>, string[]> = {
   analogy: ["寻找结构相似或机制相同的类比概念。", "确保类比能启发新的理解。"]
 };
 
-const buildPrompt = (input: z.infer<typeof ExpandChatInputSchema>) => {
-  const path = input.pathContext.length > 0 ? input.pathContext.join(" -> ") : input.rootTopic;
-  const promptLabel = input.promptType ? promptLabelMap[input.promptType] : "自由提问";
-  const guidance = input.promptType ? promptGuidanceMap[input.promptType].join(" ") : "直接回答用户问题。";
-  const userMessage = input.message ? `用户提问: ${input.message}` : "用户提问: (由联想模式驱动)";
-  return [
-    "你是一名思维导图节点对话助手，必须使用中文回复。",
-    `根主题: ${input.rootTopic}`,
-    `路径: ${path}`,
-    `当前节点: ${input.nodeTitle}`,
-    `节点描述: ${input.nodeDescription || "无"}`,
-    `联想模式: ${promptLabel}`,
-    `策略: ${guidance}`,
-    userMessage,
-    "请用 Markdown 格式回答，允许加粗、引用或列表，保持简洁，避免代码块。",
-    "仅返回 JSON，字段: reply。"
-  ].join("\n");
-};
 
 export async function expandChatAction(input: z.infer<typeof ExpandChatInputSchema>) {
   const parsed = ExpandChatInputSchema.parse(input);
-  const prompt = buildPrompt(parsed);
-  const response = await ai.generate({
-    model: modelRefName,
-    prompt,
-    output: { schema: ExpandChatOutputSchema },
-    config: {
-      model: defaultModelName
+  const prompt = ai.prompt("expand-chat") as (
+    input: {
+      rootTopic: string;
+      topicConstraints: string;
+      pathSummary: string;
+      nodeTitle: string;
+      nodeDescription: string;
+      promptLabel: string;
+      promptGuidance: string;
+      message: string;
+    },
+    options: { model: string; output: { schema: typeof ExpandChatOutputSchema } }
+  ) => Promise<{ output: z.infer<typeof ExpandChatOutputSchema> }>;
+  const promptLabel = parsed.promptType ? promptLabelMap[parsed.promptType] : "自由提问";
+  const promptGuidance = parsed.promptType
+    ? promptGuidanceMap[parsed.promptType].join(" ")
+    : "直接回答用户问题。";
+  const response = await prompt(
+    {
+      rootTopic: parsed.rootTopic,
+      topicConstraints: parsed.topicDescription || parsed.rootTopic,
+      pathSummary: parsed.pathContext.length > 0 ? parsed.pathContext.join(" -> ") : parsed.rootTopic,
+      nodeTitle: parsed.nodeTitle,
+      nodeDescription: parsed.nodeDescription || parsed.topicDescription || "无",
+      promptLabel,
+      promptGuidance,
+      message: parsed.message?.trim() || "(由联想模式驱动)"
+    },
+    {
+      model: modelRefName,
+      output: { schema: ExpandChatOutputSchema }
     }
-  });
+  );
 
   return ExpandChatOutputSchema.parse(response.output);
 }

@@ -80,7 +80,7 @@ export function TopicSidebar({
                   )}
                 />
                 <div className="font-serif text-base font-semibold">
-                  {topic.rootKeyword}
+                  {topic.masterTitle || topic.rootKeyword}
                 </div>
                 <div
                   className={clsx(
@@ -88,7 +88,7 @@ export function TopicSidebar({
                     topic.id === activeTopicId ? "text-gray-500" : "text-gray-400"
                   )}
                 >
-                  {topic.description || "No description"}
+                  {topic.globalConstraints || topic.description || "No description"}
                 </div>
               </button>
             ))}

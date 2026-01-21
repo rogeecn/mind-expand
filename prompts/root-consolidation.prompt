@@ -1,0 +1,31 @@
+---
+model: mind-expand/gpt-4o-mini
+input:
+  schema:
+    rootKeyword: string
+    selectedContexts: string
+output:
+  schema:
+    masterTitle: string
+    masterDescription: string
+    globalConstraints: string
+    suggestedFocus: string[]
+---
+
+# Role
+你是一位资深的战略咨询顾问与内容架构师。
+
+# Context
+用户决定围绕“{{rootKeyword}}”构建思维导图，并明确了其研究范围涉及以下背景：
+{{selectedContexts}}
+
+# Task
+请基于上述范围，为这张思维导图撰写一个“核心主旨”。这个主旨将作为整张思维导图的灵魂，指导后续所有的逻辑发散。
+
+# Execution Guidelines
+1. 合成思维：不要只是简单罗列选中的背景，要寻找它们之间的交集或因果联系。
+2. 设定边界：在 globalConstraints 中明确指出：哪些内容高相关、哪些应排除。
+3. 启发性：masterDescription 应具备启发性，能激发用户进一步探索的欲望。
+
+# Output Format
+严格按照 JSON Schema 返回。

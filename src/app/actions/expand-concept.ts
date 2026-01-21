@@ -8,6 +8,7 @@ const PromptTypeSchema = z.enum(["direct", "cause", "counter", "timeline", "anal
 
 const ExpandConceptInputSchema = z.object({
   rootTopic: z.string(),
+  topicDescription: z.string().optional(),
   pathContext: z.array(z.string()),
   nodeTitle: z.string(),
   nodeDescription: z.string(),
@@ -25,6 +26,7 @@ const pluginName = "mind-expand";
 const modelRefName = `${pluginName}/${defaultModelName}`;
 
 const ai = genkit({
+  promptDir: "./prompts",
   plugins: [
     openAI({
       name: pluginName,
@@ -65,34 +67,35 @@ const promptGuidanceMap: Record<z.infer<typeof PromptTypeSchema>, string[]> = {
   ]
 };
 
-const buildPrompt = (input: z.infer<typeof ExpandConceptInputSchema>) => {
-  const path = input.pathContext.join(" -> ");
-  const guidance = promptGuidanceMap[input.promptType].join(" ");
-  return [
-    "你是一名思维导图扩展助手，必须使用中文回复。",
-    `根主题: ${input.rootTopic}`,
-    `路径: ${path}`,
-    `当前节点: ${input.nodeTitle}`,
-    `节点描述: ${input.nodeDescription || "无"}`,
-    `联想模式: ${promptLabelMap[input.promptType]}`,
-    `策略: ${guidance}`,
-    "输出一个概念建议(idea)与一段中/长解释(insight)。",
-    "idea 不超过 12 个字；insight 可以是完整段落。",
-    "仅返回 JSON，字段: logic_angle, idea, insight。"
-  ].join("\n");
-};
-
 export async function expandConceptAction(input: z.infer<typeof ExpandConceptInputSchema>) {
   const parsed = ExpandConceptInputSchema.parse(input);
-  const prompt = buildPrompt(parsed);
-  const response = await ai.generate({
-    model: modelRefName,
-    prompt,
-    output: { schema: ExpandConceptOutputSchema },
-    config: {
-      model: defaultModelName
+  const prompt = ai.prompt("expand-concept") as (
+    input: {
+      rootTopic: string;
+      topicConstraints: string;
+      pathSummary: string;
+      nodeTitle: string;
+      nodeDescription: string;
+      promptLabel: string;
+      promptGuidance: string;
+    },
+    options: { model: string; output: { schema: typeof ExpandConceptOutputSchema } }
+  ) => Promise<{ output: z.infer<typeof ExpandConceptOutputSchema> }>;
+  const response = await prompt(
+    {
+      rootTopic: parsed.rootTopic,
+      topicConstraints: parsed.topicDescription || parsed.rootTopic,
+      pathSummary: parsed.pathContext.join(" -> "),
+      nodeTitle: parsed.nodeTitle,
+      nodeDescription: parsed.nodeDescription || parsed.topicDescription || "无",
+      promptLabel: promptLabelMap[parsed.promptType],
+      promptGuidance: promptGuidanceMap[parsed.promptType].join(" ")
+    },
+    {
+      model: modelRefName,
+      output: { schema: ExpandConceptOutputSchema }
     }
-  });
+  );
 
   return ExpandConceptOutputSchema.parse(response.output);
 }
