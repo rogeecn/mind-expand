@@ -37,6 +37,11 @@
   - [x] 消息列表：只追加、不提供清空
 
 - [ ] **Planned: Root Topic Disambiguation & Consolidation**
+
+- [x] **Polish: Node Details Panel**
+  - [x] 标题限制 1 行
+  - [x] 描述限制 2 行 (hover 展示完整)
+  - [x] 聊天框支持全屏切换
   - [ ] 新增 `root-disambiguation` 提示词（多语义拆解）
   - [ ] 新增 `root-consolidation` 提示词（主旨与全局约束）
   - [ ] TopicForm 调整为两步流程

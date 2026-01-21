@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import clsx from "clsx";
-import { ChevronUp, Copy, X } from "lucide-react";
+import { ChevronUp, Copy, Maximize2, Minimize2, X } from "lucide-react";
 import { Markdown } from "@/components/common/Markdown";
 import { db, type ChatMessageRecord, type NodeRecord } from "@/lib/db";
 import { expandChatAction } from "@/app/actions/expand-chat";
@@ -93,6 +93,7 @@ export function NodeDetailsPanel({
   const [activePrompt, setActivePrompt] = useState<StrategyType | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [draft, setDraft] = useState("");
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -108,6 +109,7 @@ export function NodeDetailsPanel({
     setIsLoading(false);
     setError(null);
     setActivePrompt(null);
+    setIsFullscreen(false);
   }, [node.id]);
 
   useEffect(() => {
@@ -272,19 +274,39 @@ export function NodeDetailsPanel({
     <aside
       className={clsx(
         "pointer-events-auto absolute bottom-0 left-0 right-0 z-30 grid grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-t-sm border-t border-gray-200/80 bg-[#F9F9F7] shadow-[0_-18px_36px_rgba(0,0,0,0.12)]",
-        expanded ? "h-[75vh]" : "h-[33vh]"
+        isFullscreen ? "top-0 h-full rounded-none" : expanded ? "h-[75vh]" : "h-[33vh]"
       )}
     >
       <div className="flex items-start justify-between border-b border-gray-200/80 bg-white/80 px-6 py-4 backdrop-blur">
         <div className="max-w-[70%]">
-          <h3 className="font-serif text-2xl font-semibold text-ink">{node.title}</h3>
-          <p className="mt-2 text-sm text-gray-500">{node.description || "暂无描述"}</p>
+          <h3 className="line-clamp-1 font-serif text-2xl font-semibold text-ink" title={node.title}>
+            {node.title}
+          </h3>
+          <p
+            className="mt-2 line-clamp-2 text-sm text-gray-500"
+            title={node.description || "暂无描述"}
+          >
+            {node.description || "暂无描述"}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setExpanded((prev) => !prev)}
+            onClick={() => setIsFullscreen((prev) => !prev)}
             className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-black hover:text-black"
+            title={isFullscreen ? "退出全屏" : "全屏"}
+          >
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            className={clsx(
+              "flex h-8 w-8 items-center justify-center rounded-full border text-gray-500 transition hover:border-black hover:text-black",
+              isFullscreen ? "cursor-not-allowed opacity-40" : "border-gray-200"
+            )}
+            disabled={isFullscreen}
+            title="展开/收起"
           >
             <ChevronUp className={clsx("h-4 w-4 transition", expanded && "rotate-180")} />
           </button>
@@ -292,6 +314,7 @@ export function NodeDetailsPanel({
             type="button"
             onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-black hover:text-black"
+            title="关闭"
           >
             <X className="h-4 w-4" />
           </button>
@@ -323,24 +346,6 @@ export function NodeDetailsPanel({
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 opacity-0 transition group-hover:opacity-100">
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(message.content)}
-                          className={actionClass}
-                          title="复制"
-                        >
-                          <Copy className="h-2.5 w-2.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteMessage(message.id)}
-                          className={actionClass}
-                          title="删除"
-                        >
-                          <X className="h-2.5 w-2.5" />
-                        </button>
-                      </div>
                     </div>
                     {isUser ? (
                       <p className={clsx("mt-3 whitespace-pre-line text-sm leading-relaxed", contentClass)}>
@@ -353,6 +358,24 @@ export function NodeDetailsPanel({
                         </div>
                       </div>
                     )}
+                    <div className="mt-4 flex items-center gap-2 opacity-0 transition group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(message.content)}
+                        className={actionClass}
+                        title="复制"
+                      >
+                        <Copy className="h-2.5 w-2.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMessage(message.id)}
+                        className={actionClass}
+                        title="删除"
+                      >
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </div>
                     {isLoading && isUser && message.id === lastUserMessageId && renderLoadingIndicator()}
                     {error && isUser && message.id === lastUserMessageId && renderErrorIndicator(error)}
                   </div>
