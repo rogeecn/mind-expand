@@ -256,13 +256,14 @@ export function NodeDetailsPanel({
   return (
     <aside
       className={clsx(
-        "pointer-events-auto absolute bottom-0 left-0 right-0 z-30 rounded-t-sm border-t border-gray-200 bg-white shadow-[0_-12px_30px_rgba(0,0,0,0.12)]",
+        "pointer-events-auto absolute bottom-0 left-0 right-0 z-30 grid grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-t-sm border-t border-gray-200/80 bg-[#F9F9F7] shadow-[0_-18px_36px_rgba(0,0,0,0.12)]",
         expanded ? "h-[75vh]" : "h-[33vh]"
       )}
     >
-      <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-        <div>
-          <h3 className="font-serif text-xl font-semibold text-ink">{node.title}</h3>
+      <div className="flex items-start justify-between border-b border-gray-200/80 bg-white/80 px-6 py-4 backdrop-blur">
+        <div className="max-w-[70%]">
+          <p className="text-[11px] uppercase tracking-[0.4em] text-gray-400">Mind Log</p>
+          <h3 className="mt-2 font-serif text-2xl font-semibold text-ink">{node.title}</h3>
           <p className="mt-2 text-sm text-gray-500">{node.description || "暂无描述"}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -282,91 +283,91 @@ export function NodeDetailsPanel({
           </button>
         </div>
       </div>
-      <div className="flex h-[calc(100%-88px)] flex-col">
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="space-y-6">
-            {displayMessages.length === 0
-              ? renderEmptyState()
-              : displayMessages.map((message) => {
-                  const isUser = message.role === "user";
-                  const actionClass = clsx(
-                    "flex h-6 w-6 items-center justify-center rounded-full border text-[10px] transition",
-                    isUser
-                      ? "border-gray-200 text-gray-500 hover:border-black hover:text-black"
-                      : "border-gray-200 text-gray-500 hover:border-black hover:text-black"
-                  );
-                  const nameClass = isUser ? "text-amber-600" : "text-sky-700";
-                  const contentClass = isUser ? "text-ink" : "text-gray-700";
+      <div className="min-h-0 overflow-y-auto px-6 py-5">
+        <div className="space-y-6">
+          {displayMessages.length === 0
+            ? renderEmptyState()
+            : displayMessages.map((message) => {
+                const isUser = message.role === "user";
+                const actionClass = clsx(
+                  "flex h-6 w-6 items-center justify-center rounded-full border text-[10px] transition",
+                  "border-gray-200 text-gray-500 hover:border-black hover:text-black"
+                );
+                const nameClass = isUser ? "text-amber-700" : "text-sky-700";
+                const contentClass = isUser ? "text-ink" : "text-gray-700";
 
-                  return (
-                    <div key={message.id} className="group w-full">
-                        <div className="flex items-start justify-between gap-2">
-
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={clsx("text-[11px] uppercase tracking-[0.2em]", nameClass)}>
-                            {isUser ? "用户" : "AI"}
+                return (
+                  <div key={message.id} className="group w-full border-b border-gray-200/70 pb-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className={clsx("text-[11px] uppercase tracking-[0.3em]", nameClass)}>
+                          {isUser ? "读者" : "编辑部"}
+                        </span>
+                        {!isUser && message.sourceLabel && (
+                          <span className="text-[10px] uppercase tracking-[0.3em] text-gray-400">
+                            {message.sourceLabel}
                           </span>
-                          {!isUser && message.sourceLabel && (
-                            <span className="text-[10px] uppercase tracking-[0.2em] text-gray-400">
-                              {message.sourceLabel}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 opacity-0 transition group-hover:opacity-100">
-                          <button
-                            type="button"
-                            onClick={() => handleCopy(message.content)}
-                            className={actionClass}
-                            title="复制"
-                          >
-                            <Copy className="h-2.5 w-2.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteMessage(message.id)}
-                            className={actionClass}
-                            title="删除"
-                          >
-                            <X className="h-2.5 w-2.5" />
-                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 opacity-0 transition group-hover:opacity-100">
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(message.content)}
+                          className={actionClass}
+                          title="复制"
+                        >
+                          <Copy className="h-2.5 w-2.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMessage(message.id)}
+                          className={actionClass}
+                          title="删除"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      </div>
+                    </div>
+                    {isUser ? (
+                      <p className={clsx("mt-3 whitespace-pre-line text-sm leading-relaxed", contentClass)}>
+                        {message.content}
+                      </p>
+                    ) : (
+                      <div className="mt-4 space-y-4">
+                        <div className="border-l-2 border-ink/80 pl-4">
+                          <Markdown content={message.content} className={clsx("space-y-4", contentClass)} />
                         </div>
                       </div>
-                      {isUser ? (
-                        <p className={clsx("mt-2 whitespace-pre-line text-sm leading-relaxed", contentClass)}>
-                          {message.content}
-                        </p>
-                      ) : (
-                        <Markdown content={message.content} className={clsx("mt-2", contentClass)} />
-                      )}
-                        {isLoading && isUser && message.id === lastUserMessageId && renderLoadingIndicator()}
-                        {error && isUser && message.id === lastUserMessageId && renderErrorIndicator(error)}
-
-                    </div>
-                  );
-                })}
-          </div>
+                    )}
+                    {isLoading && isUser && message.id === lastUserMessageId && renderLoadingIndicator()}
+                    {error && isUser && message.id === lastUserMessageId && renderErrorIndicator(error)}
+                  </div>
+                );
+              })}
         </div>
-        <div className="border-t border-gray-200 px-6 py-6">
-          <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              {PROMPT_TABS.map((tab) => (
-                <button
-                  key={tab.type}
-                  type="button"
-                  onClick={() => handleSendPrompt(tab.type)}
-                  disabled={isLoading}
-                  className={clsx(
-                    "rounded-full border px-4 py-1 text-xs font-semibold transition",
-                    activePrompt === tab.type
-                      ? "border-amber-500 text-ink"
-                      : "border-gray-200 text-gray-600 hover:border-black hover:text-ink",
-                    isLoading && "cursor-not-allowed opacity-50"
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+      </div>
+      <div className="border-t border-gray-200/80 bg-white/80 px-6 pt-6 pb-6 backdrop-blur">
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {PROMPT_TABS.map((tab) => (
+              <button
+                key={tab.type}
+                type="button"
+                onClick={() => handleSendPrompt(tab.type)}
+                disabled={isLoading}
+                className={clsx(
+                  "rounded-full border px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition",
+                  activePrompt === tab.type
+                    ? "border-black text-ink"
+                    : "border-gray-200 text-gray-600 hover:border-black hover:text-ink",
+                  isLoading && "cursor-not-allowed opacity-50"
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div className="rounded-sm border border-gray-200 bg-[#FCFCFA] px-3 py-1.5 shadow-[inset_0_1px_0_rgba(0,0,0,0.04)]">
             <textarea
               ref={textareaRef}
               value={draft}
@@ -374,7 +375,7 @@ export function NodeDetailsPanel({
               onKeyDown={handleKeyDown}
               placeholder="输入你的问题"
               rows={1}
-              className="min-h-[40px] w-full resize-none rounded-sm border border-gray-200 px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-black"
+              className="min-h-[32px] w-full resize-none bg-transparent text-sm text-gray-700 outline-none"
             />
           </div>
         </div>
