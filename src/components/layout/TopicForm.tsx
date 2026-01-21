@@ -89,11 +89,19 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
 
   const handleCreateTopic = () => {
     if (isAnalyzing || isConfirming) return;
+    const combinedDescription = [
+      description.trim(),
+      globalConstraints ? `\n\n约束范围：\n${globalConstraints}` : "",
+      suggestedFocus.length > 0 ? `\n\n建议方向：\n- ${suggestedFocus.join("\n- ")}` : ""
+    ]
+      .join("")
+      .trim();
+
     setIsConfirming(true);
     Promise.resolve(
       onSubmit({
         rootKeyword,
-        description,
+        description: combinedDescription,
         masterTitle,
         globalConstraints,
         suggestedFocus
@@ -101,25 +109,26 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
     ).finally(() => setIsConfirming(false));
   };
 
-  const handleDescriptionChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setDescription(event.target.value);
-  };
 
   return (
     <div className="w-full max-w-3xl py-24">
-      <div className="text-center">
-        <p className="text-[11px] uppercase tracking-[0.4em] text-gray-500">New Topic</p>
-        <div className="mx-auto mt-6 h-px w-24 bg-gray-200" />
-        <h2 className="mt-6 font-serif text-4xl font-semibold text-ink">
-          Frame the question first.
-        </h2>
-        <p className="mx-auto mt-4 max-w-xl text-sm text-gray-600">
-          Provide a root subject and let AI propose scope constraints to keep the
-          mind map consistent.
-        </p>
-      </div>
+       <div className="text-center">
+         <p className="text-[11px] uppercase tracking-[0.4em] text-gray-500">新建主题</p>
+         <div className="mx-auto mt-6 h-px w-24 bg-gray-200" />
+         <h2 className="mt-6 font-serif text-4xl font-semibold text-ink">
+           两步生成你的主题约束
+         </h2>
+         <p className="mx-auto mt-4 max-w-xl text-sm text-gray-600">
+           先提取二义性信息，再基于选择生成方向性描述与约束。
+         </p>
+       </div>
 
-      <div className="mt-10 space-y-6 text-left">
+
+       <div className="mt-10 space-y-6 text-left overflow-y-auto max-h-[70vh] pr-1">
+         {(isAnalyzing || isConfirming) && (
+           <p className="text-xs text-gray-400">AI 正在分析语义...</p>
+         )}
+
         <div className="space-y-3">
           <label
             className="text-[11px] uppercase tracking-[0.3em] text-gray-500"
@@ -136,22 +145,24 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
               placeholder="Enter a root topic"
               className="w-full rounded-sm border border-gray-300 bg-white px-4 py-3 pr-24 text-lg text-ink focus:border-black focus:outline-none"
             />
-            <button
-              type="button"
-              onClick={handleAnalyze}
-              disabled={isAnalyzing || isConfirming || !rootKeyword.trim()}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm border border-gray-300 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gray-600 transition hover:border-black hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isAnalyzing ? "Analyzing" : "AI Scope"}
-            </button>
+             <button
+               type="button"
+               onClick={handleAnalyze}
+               disabled={isAnalyzing || isConfirming || !rootKeyword.trim()}
+               className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm border border-gray-300 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gray-600 transition hover:border-black hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
+             >
+               {isAnalyzing ? "提取中" : "提取二义性"}
+             </button>
+
           </div>
         </div>
 
         {senseOptions.length > 0 && (
           <div className="space-y-3">
-            <label className="text-[11px] uppercase tracking-[0.3em] text-gray-500">
-              Select Scopes
-            </label>
+             <label className="text-[11px] uppercase tracking-[0.3em] text-gray-500">
+               选择语义
+             </label>
+
             <div className="grid gap-2">
                 {senseOptions.map((option) => (
                   <label
@@ -190,81 +201,72 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
                 ))}
 
             </div>
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={handleConfirmScopes}
-                disabled={isConfirming || selectedSenses.length === 0}
-                className="rounded-sm border border-gray-300 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-600 transition hover:border-black hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isConfirming ? "Confirming" : "Confirm Scopes"}
-              </button>
-            </div>
+             <div className="pt-1">
+               <button
+                 type="button"
+                 onClick={handleConfirmScopes}
+                 disabled={isConfirming || selectedSenses.length === 0}
+                 className="rounded-sm border border-gray-300 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-600 transition hover:border-black hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
+               >
+                 {isConfirming ? "生成中" : "生成约束"}
+               </button>
+             </div>
+
           </div>
         )}
 
-         <div className="space-y-3">
-           <label
-             className="text-[11px] uppercase tracking-[0.3em] text-gray-500"
-             htmlFor="topic-description"
-           >
-             Master Description
-           </label>
-           <textarea
-             id="topic-description"
-             name="topic-description"
-             value={description}
-             onChange={handleDescriptionChange}
-             placeholder="Describe the scope, assumptions, or exclusions for this topic"
-             className="min-h-[160px] w-full rounded-sm border border-gray-300 bg-white px-4 py-3 text-sm text-ink focus:border-black focus:outline-none"
-           />
-           {(isAnalyzing || isConfirming) && (
-             <p className="text-xs text-gray-400">AI 正在分析语义...</p>
-           )}
-           {selectedSenses.length > 0 && (
-             <p className="text-xs text-gray-500">
-               已选择 {selectedSenses.length} 个语义，将生成主旨与全局约束。
-             </p>
-           )}
-         </div>
-         <div className="space-y-3">
-           <label className="text-[11px] uppercase tracking-[0.3em] text-gray-500">
-             Global Constraints
-           </label>
-           <div className="min-h-[120px] rounded-sm border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-             {globalConstraints || "等待生成全局约束。"}
-           </div>
-         </div>
-         <div className="space-y-3">
-           <label className="text-[11px] uppercase tracking-[0.3em] text-gray-500">
-             Suggested Focus
-           </label>
-           <div className="rounded-sm border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600">
-             {suggestedFocus.length > 0 ? (
-               <ul className="space-y-2">
-                 {suggestedFocus.map((item) => (
-                   <li key={item} className="flex items-start gap-2">
-                     <span className="mt-1 h-1.5 w-1.5 rounded-full bg-gray-400" />
-                     <span>{item}</span>
-                   </li>
-                 ))}
-               </ul>
-             ) : (
-               "等待生成建议方向。"
-             )}
-           </div>
-         </div>
+          <div className="space-y-3">
+            <label className="text-[11px] uppercase tracking-[0.3em] text-gray-500">
+              主旨描述
+            </label>
+            <div className="rounded-sm border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700">
+              {description || "等待生成主旨描述。"}
+            </div>
+          </div>
+          <div className="space-y-3">
+            <label className="text-[11px] uppercase tracking-[0.3em] text-gray-500">
+              方向性约束
+            </label>
+            <div className="rounded-sm border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+              {globalConstraints || "等待生成方向性约束。"}
+            </div>
+          </div>
+          {suggestedFocus.length > 0 && (
+            <div className="space-y-3">
+              <label className="text-[11px] uppercase tracking-[0.3em] text-gray-500">
+                建议方向
+              </label>
+              <div className="rounded-sm border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600">
+                <ul className="space-y-2">
+                  {suggestedFocus.map((item) => (
+                    <li key={item} className="flex items-start gap-2">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-gray-400" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
 
 
         <div className="pt-2">
-          <button
-            className="rounded-sm border border-ink px-8 py-3 font-medium text-ink transition hover:bg-ink hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={handleCreateTopic}
-            type="button"
-            disabled={isAnalyzing || isConfirming || !rootKeyword.trim()}
-          >
-            Create Topic
-          </button>
+           <button
+             className="rounded-sm border border-ink px-8 py-3 font-medium text-ink transition hover:bg-ink hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+             onClick={handleCreateTopic}
+             type="button"
+             disabled={
+               isAnalyzing ||
+               isConfirming ||
+               !rootKeyword.trim() ||
+               !description ||
+               !globalConstraints
+             }
+           >
+             创建主题
+           </button>
+
         </div>
       </div>
     </div>
