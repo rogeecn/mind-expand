@@ -27,6 +27,7 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
   const [suggestedFocus, setSuggestedFocus] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [senseOptions, setSenseOptions] = useState<string[]>([]);
   const [senseDescriptions, setSenseDescriptions] = useState<Record<string, string>>({});
   const [senseKeyTerms, setSenseKeyTerms] = useState<Record<string, string[]>>({});
@@ -88,7 +89,7 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
   };
 
   const handleCreateTopic = () => {
-    if (isAnalyzing || isConfirming) return;
+    if (isAnalyzing || isConfirming || isCreating) return;
     const combinedDescription = [
       description.trim(),
       globalConstraints ? `\n\n约束范围：\n${globalConstraints}` : "",
@@ -97,7 +98,7 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
       .join("")
       .trim();
 
-    setIsConfirming(true);
+    setIsCreating(true);
     Promise.resolve(
       onSubmit({
         rootKeyword,
@@ -106,68 +107,84 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
         globalConstraints,
         suggestedFocus
       })
-    ).finally(() => setIsConfirming(false));
+    ).finally(() => setIsCreating(false));
   };
 
 
+  const hasAnalyzed = senseOptions.length > 0;
+
   return (
-    <div className="w-full max-w-3xl py-24">
-       <div className="text-center">
-         <p className="text-[11px] uppercase tracking-[0.4em] text-gray-500">新建主题</p>
-         <div className="mx-auto mt-6 h-px w-24 bg-gray-200" />
-         <h2 className="mt-6 font-serif text-4xl font-semibold text-ink">
-           两步生成你的主题约束
-         </h2>
-         <p className="mx-auto mt-4 max-w-xl text-sm text-gray-600">
-           先提取二义性信息，再基于选择生成方向性描述与约束。
-         </p>
-       </div>
-
-
-       <div className="mt-10 space-y-6 text-left overflow-y-auto max-h-[70vh] pr-1">
-         {(isAnalyzing || isConfirming) && (
-           <p className="text-xs text-gray-400">AI 正在分析语义...</p>
-         )}
-
-        <div className="space-y-3">
-          <label
-            className="text-[11px] uppercase tracking-[0.3em] text-gray-500"
-            htmlFor="topic-root"
-          >
-            Topic
-          </label>
-          <div className="relative">
-            <input
-              id="topic-root"
-              name="topic-root"
-              value={rootKeyword}
-              onChange={handleRootChange}
-              placeholder="Enter a root topic"
-              className="w-full rounded-sm border border-gray-300 bg-white px-4 py-3 pr-24 text-lg text-ink focus:border-black focus:outline-none"
-            />
-             <button
-               type="button"
-               onClick={handleAnalyze}
-               disabled={isAnalyzing || isConfirming || !rootKeyword.trim()}
-               className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm border border-gray-300 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gray-600 transition hover:border-black hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
-             >
-               {isAnalyzing ? "提取中" : "提取二义性"}
-             </button>
-
-          </div>
+    <div className="mx-auto w-full max-w-4xl px-6 py-16">
+        <div className="text-left">
+          {hasAnalyzed ? (
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setRootKeyword("");
+                  setSenseOptions([]);
+                  setSenseDescriptions({});
+                  setSenseKeyTerms({});
+                  setSelectedSenses([]);
+                  setDescription("");
+                  setMasterTitle(undefined);
+                  setGlobalConstraints(undefined);
+                  setSuggestedFocus([]);
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-black hover:text-black"
+                title="重新开始"
+              >
+                <span className="text-xs">↩</span>
+              </button>
+              <h2 className="font-serif text-3xl font-semibold text-ink">{rootKeyword}</h2>
+            </div>
+          ) : (
+            <h2 className="font-serif text-4xl font-semibold text-ink">
+              输入主题并开始分析
+            </h2>
+          )}
+          <div className="mt-6 h-px w-24 bg-gray-200" />
         </div>
 
-        {senseOptions.length > 0 && (
-          <div className="space-y-3">
-             <label className="text-[11px] uppercase tracking-[0.3em] text-gray-500">
-               选择语义
-             </label>
+      <div className="mt-12 space-y-10 text-left">
+        {!hasAnalyzed && (
+          <section className="space-y-4">
+            <div>
+              <input
+                id="topic-root"
+                name="topic-root"
+                value={rootKeyword}
+                onChange={handleRootChange}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter") return;
+                  event.preventDefault();
+                  if (!rootKeyword.trim() || isAnalyzing || isConfirming) return;
+                  void handleAnalyze();
+                }}
+                placeholder="输入主题关键词并回车分析"
+                className="w-full rounded-sm border border-gray-300 bg-white px-4 py-3 text-lg text-ink focus:border-black focus:outline-none"
+              />
+              {(isAnalyzing || isConfirming) && (
+                <p className="mt-2 text-xs uppercase tracking-[0.3em] text-gray-400">
+                  AI 正在分析语义...
+                </p>
+              )}
+            </div>
+          </section>
+        )}
 
-            <div className="grid gap-2">
+        {hasAnalyzed && !globalConstraints && (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+              <h3 className="font-serif text-xl text-ink">选择语义并生成约束</h3>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-2">
                 {senseOptions.map((option) => (
                   <label
                     key={option}
-                    className="flex cursor-pointer items-start gap-3 rounded-sm border border-gray-200 px-3 py-3 text-sm text-gray-600 transition hover:border-black hover:text-ink"
+                    className="flex cursor-pointer items-start gap-3 border-b border-gray-200/80 py-3 text-sm text-gray-600 transition hover:text-ink"
                   >
                     <input
                       type="checkbox"
@@ -199,45 +216,35 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
                     </div>
                   </label>
                 ))}
-
+              </div>
             </div>
-             <div className="pt-1">
-               <button
-                 type="button"
-                 onClick={handleConfirmScopes}
-                 disabled={isConfirming || selectedSenses.length === 0}
-                 className="rounded-sm border border-gray-300 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-600 transition hover:border-black hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
-               >
-                 {isConfirming ? "生成中" : "生成约束"}
-               </button>
-             </div>
-
-          </div>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleConfirmScopes}
+                disabled={isConfirming || selectedSenses.length === 0}
+                className="rounded-sm border border-gray-300 px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-gray-600 transition hover:border-black hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isConfirming ? "生成中" : "生成约束"}
+              </button>
+            </div>
+          </section>
         )}
 
-          <div className="space-y-3">
-            <label className="text-[11px] uppercase tracking-[0.3em] text-gray-500">
-              主旨描述
-            </label>
-            <div className="rounded-sm border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700">
-              {description || "等待生成主旨描述。"}
+        {globalConstraints && description && (
+          <section className="space-y-8">
+            <div className="border-b border-gray-200 pb-6">
+              <p className="text-[11px] uppercase tracking-[0.3em] text-gray-500">主旨描述</p>
+              <p className="mt-4 text-base text-gray-800">{description}</p>
             </div>
-          </div>
-          <div className="space-y-3">
-            <label className="text-[11px] uppercase tracking-[0.3em] text-gray-500">
-              方向性约束
-            </label>
-            <div className="rounded-sm border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-              {globalConstraints || "等待生成方向性约束。"}
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.3em] text-gray-500">方向性约束</p>
+              <p className="mt-4 text-sm text-gray-600">{globalConstraints}</p>
             </div>
-          </div>
-          {suggestedFocus.length > 0 && (
-            <div className="space-y-3">
-              <label className="text-[11px] uppercase tracking-[0.3em] text-gray-500">
-                建议方向
-              </label>
-              <div className="rounded-sm border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600">
-                <ul className="space-y-2">
+            {suggestedFocus.length > 0 && (
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.3em] text-gray-500">建议方向</p>
+                <ul className="mt-3 space-y-2 text-sm text-gray-600">
                   {suggestedFocus.map((item) => (
                     <li key={item} className="flex items-start gap-2">
                       <span className="mt-1 h-1.5 w-1.5 rounded-full bg-gray-400" />
@@ -246,28 +253,32 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
                   ))}
                 </ul>
               </div>
+            )}
+            <div className="flex items-center justify-between border-t border-gray-200 pt-6">
+              {isCreating && (
+                <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-gray-400">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-400" />
+                  <span>正在创建主题...</span>
+                </div>
+              )}
+              <button
+                className="rounded-sm border border-ink px-8 py-3 font-medium text-ink transition hover:bg-ink hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleCreateTopic}
+                type="button"
+                disabled={
+                  isAnalyzing ||
+                  isConfirming ||
+                  isCreating ||
+                  !rootKeyword.trim() ||
+                  !description ||
+                  !globalConstraints
+                }
+              >
+                {isCreating ? "创建中" : "创建主题"}
+              </button>
             </div>
-          )}
-
-
-
-        <div className="pt-2">
-           <button
-             className="rounded-sm border border-ink px-8 py-3 font-medium text-ink transition hover:bg-ink hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-             onClick={handleCreateTopic}
-             type="button"
-             disabled={
-               isAnalyzing ||
-               isConfirming ||
-               !rootKeyword.trim() ||
-               !description ||
-               !globalConstraints
-             }
-           >
-             创建主题
-           </button>
-
-        </div>
+          </section>
+        )}
       </div>
     </div>
   );

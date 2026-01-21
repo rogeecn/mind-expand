@@ -187,7 +187,7 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
             <PanelLeftOpen className="h-4 w-4" />
           </button>
         )}
-        <div className="flex h-full justify-center">
+        <div className="h-full overflow-y-auto">
           {rightContent}
         </div>
       </main>
