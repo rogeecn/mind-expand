@@ -2,16 +2,17 @@
 model: mind-expand/gpt-4o-mini
 input:
   schema:
-    rootTopic: string
-    topicConstraints: string
-    pathSummary: string
-    currentNode: string
-    existingChildrenSummary: string
+    root_topic: string
+    topic_constraints: string
+    path_summary: string
+    current_node: string
+    existing_children_summary: string
     count: number
 output:
   schema:
     logic_angle: string
-    nodes: string[]
+    nodes:
+      - string
     insight: string
 ---
 
@@ -24,10 +25,10 @@ output:
 3. 逻辑张力：保持直接相关，切入点独特但不牺牲逻辑紧密性。
 
 # Context Control
-主题约束: {{topicConstraints}}
-绝对坐标: {{pathSummary}} -> {{currentNode}}
-防御性排他: {{existingChildrenSummary}}（请寻找与这些词不同维度的平级概念）。
-目标数量: {{count}}
+主题约束: {{topic_constraints}}
+绝对坐标: {{path_summary}} -> {{current_node}}
+防御性排他: {{existing_children_summary}}（请寻找与这些词不同维度的平级概念）。
+目标数量: {{count}}（必须严格遵守）
 
 # Execution Guidelines
 1. 层级测试：候选词必须满足“X 属于当前节点的一种”或“当前节点包含 X”或“X 是当前节点的直接属性”。
@@ -36,4 +37,6 @@ output:
 4. 长度限制：每个节点不超过 12 个字。
 
 # Output
-仅输出符合 Schema 的 JSON 对象，确保语种为：纯中文。
+1. 必须输出 {{count}} 个候选节点，不得少于 3 个。
+2. 不得输出错误提示、解释或缺失提示，必须直接给出节点与一句话 insight。
+3. 仅输出符合 Schema 的 JSON 对象，确保语种为：纯中文。
