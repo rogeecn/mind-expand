@@ -262,8 +262,7 @@ export function NodeDetailsPanel({
     >
       <div className="flex items-start justify-between border-b border-gray-200/80 bg-white/80 px-6 py-4 backdrop-blur">
         <div className="max-w-[70%]">
-          <p className="text-[11px] uppercase tracking-[0.4em] text-gray-400">Mind Log</p>
-          <h3 className="mt-2 font-serif text-2xl font-semibold text-ink">{node.title}</h3>
+          <h3 className="font-serif text-2xl font-semibold text-ink">{node.title}</h3>
           <p className="mt-2 text-sm text-gray-500">{node.description || "暂无描述"}</p>
         </div>
         <div className="flex items-center gap-2">
