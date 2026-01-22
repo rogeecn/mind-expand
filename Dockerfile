@@ -17,6 +17,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 RUN useradd --create-home --uid 1001 nextjs
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/prompts ./prompts
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 USER nextjs
