@@ -3,20 +3,23 @@
 import { db } from "@/lib/db";
 import clsx from "clsx";
 import { useLiveQuery } from "dexie-react-hooks";
-import { PanelLeftClose, Plus } from "lucide-react";
+import { PanelLeftClose, Plus, Settings } from "lucide-react";
 
 type SidebarProps = {
   activeTopicId: string | null;
   onSelectTopic: (topicId: string) => void;
   onCreateTopic: () => void;
+  onOpenManager: () => void;
   isOpen: boolean;
   onToggle: () => void;
 };
+
 
 export function TopicSidebar({
   activeTopicId,
   onSelectTopic,
   onCreateTopic,
+  onOpenManager,
   isOpen,
   onToggle
 }: SidebarProps) {
@@ -48,13 +51,24 @@ export function TopicSidebar({
       </div>
 
       <div className="px-4 pb-4 min-w-72">
-        <button
-          onClick={onCreateTopic}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-ink shadow-sm transition-all hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98]"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New Topic</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onCreateTopic}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-ink shadow-sm transition-all hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98]"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Topic</span>
+          </button>
+          <button
+            type="button"
+            onClick={onOpenManager}
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 shadow-sm transition-all hover:bg-gray-50 hover:border-gray-300 hover:text-ink active:scale-[0.98]"
+            aria-label="Backup manager"
+            title="备份管理"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <div className="mx-5 h-px bg-gray-200" />

@@ -2,6 +2,7 @@
 
 import { TopicForm, type TopicFormValues } from "@/components/layout/TopicForm";
 import { TopicSidebar } from "@/components/layout/TopicSidebar";
+import { TopicManagerModal } from "@/components/layout/TopicManagerModal";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { expandNodeAction } from "@/app/actions/expand-node";
 import { useTopic } from "@/hooks/useTopic";
@@ -26,6 +27,7 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
   const [isCreating, setIsCreating] = useState(mode === "create");
   const [isReady, setIsReady] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isManagerOpen, setIsManagerOpen] = useState(false);
   const { topic } = useTopic(activeTopicId);
 
   useEffect(() => {
@@ -174,9 +176,11 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
         activeTopicId={activeTopicId}
         onSelectTopic={handleSelectTopic}
         onCreateTopic={handleCreateTopic}
+        onOpenManager={() => setIsManagerOpen(true)}
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
       />
+      <TopicManagerModal isOpen={isManagerOpen} onClose={() => setIsManagerOpen(false)} />
       <main className="relative flex-1 overflow-hidden">
         {!isSidebarOpen && (
           <button

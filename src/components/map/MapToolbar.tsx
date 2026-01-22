@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import clsx from "clsx";
-import { ChevronDown, Focus, MoreHorizontal, TreePine } from "lucide-react";
+import { ChevronDown, Focus, Download, TreePine } from "lucide-react";
 
 type ToolbarProps = {
   onFitView: () => void;
   onExport: () => void;
-  onImport: () => void;
   onLayoutTree: () => void;
   onSetColor: (color: "ink" | "amber" | "sky" | "mint" | null) => void;
   isColorEnabled: boolean;
@@ -29,29 +28,21 @@ const colorOptions: Array<{
 export function MapToolbar({
   onFitView,
   onExport,
-  onImport,
   onLayoutTree,
   onSetColor,
   isColorEnabled,
   lastColor
 }: ToolbarProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [colorOpen, setColorOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement | null>(null);
   const colorRef = useRef<HTMLDivElement | null>(null);
   const buttonBase =
     "inline-flex items-center gap-2 rounded-sm border border-gray-200 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-600 transition hover:border-black hover:text-black";
   const colorButtonBase = "inline-flex items-center justify-center text-xs font-medium uppercase tracking-wide";
 
   const handleExport = () => {
-    setMenuOpen(false);
     onExport();
   };
 
-  const handleImport = () => {
-    setMenuOpen(false);
-    onImport();
-  };
 
   const lastSwatchClass = (() => {
     switch (lastColor) {
@@ -124,34 +115,10 @@ export function MapToolbar({
           </div>
         )}
       </div>
-      <div className="relative" ref={menuRef}>
-        <button
-          className={buttonBase}
-          type="button"
-          onClick={() => setMenuOpen((open) => !open)}
-          aria-label="More"
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
-        {menuOpen && (
-          <div className="absolute right-0 top-12 min-w-[140px] rounded-sm border border-gray-200 bg-white py-2 text-xs uppercase tracking-[0.2em] text-gray-500 shadow-lg">
-            <button
-              className="flex w-full items-center px-4 py-2 text-left hover:bg-gray-100"
-              type="button"
-              onClick={handleExport}
-            >
-              Export
-            </button>
-            <button
-              className="flex w-full items-center px-4 py-2 text-left hover:bg-gray-100"
-              type="button"
-              onClick={handleImport}
-            >
-              Import
-            </button>
-          </div>
-        )}
-      </div>
+      <button className={buttonBase} type="button" onClick={handleExport} aria-label="Export">
+        <Download className="h-3.5 w-3.5" />
+        导出
+      </button>
     </div>
   );
 }

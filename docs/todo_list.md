@@ -22,6 +22,7 @@
 - [x] **Phase 5: Export / Import**
   - [x] Export mind map JSON.
   - [x] Import JSON with validation.
+  - [x] 新增备份管理（侧边栏导入/导出，按 ID 冲突处理）
 
 - [x] **Planned: Node Details Chat (Confirmed)**
   - [x] Dexie 新增 `chat_messages` 表（`topicId + nodeId`, `role`, `content`, `promptType?`, `createdAt`）

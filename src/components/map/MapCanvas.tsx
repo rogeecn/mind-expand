@@ -23,8 +23,7 @@ import { db, type EdgeRecord, type NodeRecord, type TopicStyle } from "@/lib/db"
 import { layoutWithD3Tree } from "@/lib/layout";
 
 import { expandNodeAction } from "@/app/actions/expand-node";
-import { downloadExport, importExportFile } from "@/components/map/ImportExport";
-import { importPayload, validatePayload } from "@/hooks/useImportExport";
+import { downloadExport } from "@/components/map/ImportExport";
 import { createId } from "@/lib/uuid";
 
 const nodeTypes: NodeTypes = {
@@ -158,20 +157,6 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     downloadExport({ topic, nodes, edges });
   };
 
-  const onImport = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "application/json";
-    input.onchange = async () => {
-      if (!input.files?.[0]) return;
-      const payload = await importExportFile(input.files[0]);
-      if (!validatePayload(payload)) return;
-      await importPayload(payload);
-      localStorage.setItem("activeTopicId", payload.topic.id);
-      window.location.reload();
-    };
-    input.click();
-  };
 
   const onLayoutTree = useCallback(async () => {
     const layout = layoutWithD3Tree(visibleNodes); // Only layout visible nodes!
@@ -546,7 +531,6 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         onFitView={onFitView}
         onLayoutTree={onLayoutTree}
         onExport={onExport}
-        onImport={onImport}
         onSetColor={handleSetColor}
         isColorEnabled={Boolean(selectedNodeId)}
         lastColor={lastColor}
