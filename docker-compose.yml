@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  mind-extend:
+    image: ghcr.io/rogeecn/mind-extend:latest
+    ports:
+      - "3000:3000"
+    environment:
+      MODEL_CATALOG: '[{"id":"gpt-5.2","label":"gpt-5.2","provider":"openai","model":"gpt-5.2"}]'
+      MODEL_DEFAULT_ID: "gpt-5.2"
+      OPENAI_API_KEY: ""
+      OPENAI_BASE_URL: "https://your-openai-endpoint/v1"
+      OPENAI_TIMEOUT_MS: "180000"
+      # GENKIT_ENV: dev | prod | test
+      GENKIT_ENV: "dev"
+    restart: unless-stopped

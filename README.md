@@ -16,6 +16,14 @@ npm run docker:run
 
 Open http://localhost:3000
 
+### Docker Compose
+
+```bash
+docker compose up -d
+```
+
+Open http://localhost:3000
+
 ### Publish (GitHub Actions)
 
 Push a git tag to publish to GHCR:
