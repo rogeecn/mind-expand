@@ -6,7 +6,9 @@
     "dev": "next dev -p 3001 -H 0.0.0.0",
     "build": "next build",
     "start": "next start -p 3001 -H 0.0.0.0",
-    "lint": "next lint"
+    "lint": "next lint",
+    "docker:build": "docker build -t ghcr.io/rogeecn/mind-extend:local .",
+    "docker:run": "docker run --rm -p 3000:3000 ghcr.io/rogeecn/mind-extend:local"
   },
   "dependencies": {
     "@genkit-ai/compat-oai": "^1.0.0",
