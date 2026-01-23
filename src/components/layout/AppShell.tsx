@@ -103,17 +103,18 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
         rootTopic: newTopic.rootKeyword,
         topicDescription: newTopic.globalConstraints || newTopic.description,
         pathContext: [newTopic.rootKeyword],
+        pathDetails: [{ title: newTopic.rootKeyword, description: newTopic.description || "" }],
         existingChildren: [],
         count: 6
       });
 
       const positions = calculateChildPositions(rootNode, [], response.nodes.length);
-      const newNodes: NodeRecord[] = response.nodes.map((nodeTitle: string, index: number) => ({
+      const newNodes: NodeRecord[] = response.nodes.map((node, index: number) => ({
         id: createId(),
         topicId: newTopic.id,
         parentId: rootNode.id,
-        title: nodeTitle,
-        description: response.insight,
+        title: node.title,
+        description: [node.reason, node.depth_thought].filter(Boolean).join("\n\n"),
         x: positions[index]?.x ?? rootNode.x + 280,
         y: positions[index]?.y ?? rootNode.y,
         nodeStyle: newTopic.styleConfig.nodeStyle,

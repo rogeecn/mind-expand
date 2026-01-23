@@ -5,6 +5,9 @@ input:
     root_topic: string
     topic_constraints: string
     path_summary: string
+    path_details:
+      - title: string
+        description: string
     current_node: string
     existing_children_summary: string
     count: number
@@ -12,7 +15,9 @@ output:
   schema:
     logic_angle: string
     nodes:
-      - string
+      - title: string
+        reason: string
+        depth_thought: string
     insight: string
     hierarchy_check: string 
 ---
@@ -37,6 +42,11 @@ output:
 # Context Control
 - 全局主题: {{root_topic}}
 - 主题约束边界: {{topic_constraints}}
+- 路径摘要: {{path_summary}}
+- 路径详情（标题 + 描述，仅用于方向约束，不可直接复述）：
+{{#each path_details}}
+  - {{title}}：{{description}}
+{{/each}}
 - **当前操作节点: {{current_node}}**
 - 防御性排他: {{existing_children_summary}}
 - 目标数量: {{count}}
@@ -45,9 +55,15 @@ output:
 1. **血缘校验**：所有生成的节点必须通过校验 —— “[子节点] 是 {{current_node}} 的一部分”。
 2. **排除重复**：不得输出 `{{existing_children_summary}}` 中已存在的子节点，必须生成新的补充维度。
 3. **语义密度**：优先使用名词或名词性短语，严禁使用动宾短语（如“提高...”、“优化...”）。
-4. **环境适配**：虽然进行结构化拆解，但词汇选择必须符合 `{{topic_constraints}}` 的专业语境。
+4. **方向约束**：`path_details` 仅用于校准思维方向与边界，不可直接摘录或复述其中描述。
+5. **独立推演**：输出必须体现独立思考过程，不得将上级推荐信息作为答案来源。
+6. **环境适配**：虽然进行结构化拆解，但词汇选择必须符合 `{{topic_constraints}}` 的专业语境。
 
 # Output
 1. 仅输出符合 Schema 的 JSON。
-2. `hierarchy_check` 填写：已确认所有节点均为 {{current_node}} 的组成维度，已排除因果与指标联想。
+2. `nodes` 数组中每个元素必须包含：
+   - `title`: 子节点名称
+   - `reason`: 推荐该子节点的理由（对应父节点的结构拆解价值）
+   - `depth_thought`: 进一步的深度思考或洞察（可引导后续展开）
+3. `hierarchy_check` 填写：已确认所有节点均为 {{current_node}} 的组成维度，已排除因果与指标联想。
 

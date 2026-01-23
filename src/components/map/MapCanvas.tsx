@@ -206,17 +206,25 @@ export function MapCanvas({ topicId }: { topicId: string }) {
           rootTopic: topic.rootKeyword,
           topicDescription: topic.globalConstraints || topic.description,
           pathContext,
+          pathDetails: lineage
+            .slice()
+            .reverse()
+            .map((item) => ({
+              title: item.title,
+              description: item.description || ""
+            }))
+            .filter((item) => item.title.length > 0),
           existingChildren: existingChildren.map((child) => child.title),
           count
         });
 
         // 1. Create new nodes with temporary positions
-        const newNodes: NodeRecord[] = response.nodes.map((nodeTitle: string) => ({
+        const newNodes: NodeRecord[] = response.nodes.map((node) => ({
           id: createId(),
           topicId: topic.id,
           parentId: parent.id,
-          title: nodeTitle,
-          description: response.insight ?? "",
+          title: node.title,
+          description: [node.reason, node.depth_thought].filter(Boolean).join("\n\n"),
           x: 0,
           y: 0,
           nodeStyle: styleConfig.nodeStyle,

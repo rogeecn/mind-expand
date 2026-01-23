@@ -9,13 +9,29 @@ const ExpandInputSchema = z.object({
   rootTopic: z.string(),
   topicDescription: z.string(),
   pathContext: z.array(z.string()),
+  pathDetails: z.array(
+    z.object({
+      title: z.string(),
+      description: z.string()
+    })
+  ),
   existingChildren: z.array(z.string()),
   count: z.number().min(1).max(10)
 });
 
 const ExpandOutputSchema = z.object({
   logic_angle: z.string().describe("本次联想选取的逻辑维度（隐藏字段）"),
-  nodes: z.array(z.string().max(12)).min(3).max(10).describe("结果数组 (3-10个)"),
+  nodes: z
+    .array(
+      z.object({
+        title: z.string().max(12),
+        reason: z.string(),
+        depth_thought: z.string()
+      })
+    )
+    .min(3)
+    .max(10)
+    .describe("子节点 + 推荐理由 + 深度思考"),
   insight: z.string().describe("一句话推荐理由")
 });
 
@@ -50,6 +66,7 @@ export async function expandNodeAction(input: z.infer<typeof ExpandInputSchema>)
     root_topic: parsed.rootTopic,
     topic_constraints: parsed.topicDescription || parsed.rootTopic,
     path_summary: pathSummary,
+    path_details: parsed.pathDetails,
     current_node: currentNode,
     existing_children_summary: existingChildrenSummary,
     count: parsed.count
@@ -65,6 +82,7 @@ export async function expandNodeAction(input: z.infer<typeof ExpandInputSchema>)
       root_topic: string;
       topic_constraints: string;
       path_summary: string;
+      path_details: { title: string; description: string }[];
       current_node: string;
       existing_children_summary: string;
       count: number;
