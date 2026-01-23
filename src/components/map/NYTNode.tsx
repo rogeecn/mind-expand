@@ -21,6 +21,13 @@ export const NYTNode = memo(function NYTNode({ data, selected }: NodeProps<NYTNo
       role="button"
       tabIndex={0}
       onClick={() => data.onSelect?.()}
+      onKeyDown={(e) => {
+        // Prevent browser from converting Enter/Space to click events on the focused element
+        // This fixes the issue where pressing Enter on a new node triggers a click on the previously focused (old) node
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+        }
+      }}
       className={clsx(
         "group relative flex h-[50px] w-auto min-w-[220px] max-w-[360px] items-center justify-center rounded-sm border px-6 text-center text-ink transition-all duration-200 focus:outline-none",
         selected
