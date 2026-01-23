@@ -278,20 +278,20 @@ export function NodeDetailsPanel({
           </div>
           <div className="flex flex-col gap-3 shrink-0 pt-1 border-l border-gray-100 pl-4">
              <button
-               onClick={() => setViewMode("chat")}
-               className="flex items-center gap-2 text-ink hover:text-black transition group"
-               title="进入研讨"
-             >
-               <MessageSquare className="w-4 h-4" />
-               <span className="text-[10px] font-bold uppercase tracking-widest group-hover:underline">研讨</span>
-             </button>
-             <button
                onClick={onClose}
                className="flex items-center gap-2 text-gray-400 hover:text-red-600 transition group"
                title="关闭"
              >
                <X className="w-4 h-4" />
                <span className="text-[10px] font-bold uppercase tracking-widest group-hover:underline">关闭</span>
+             </button>
+             <button
+               onClick={() => setViewMode("chat")}
+               className="flex items-center gap-2 text-ink hover:text-black transition group"
+               title="进入研讨"
+             >
+               <MessageSquare className="w-4 h-4" />
+               <span className="text-[10px] font-bold uppercase tracking-widest group-hover:underline">研讨</span>
              </button>
           </div>
         </div>
