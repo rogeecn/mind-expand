@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import clsx from "clsx";
-import { ChevronDown, Focus, Download, TreePine, HelpCircle, X } from "lucide-react";
+import { ChevronDown, Focus, TreePine, HelpCircle, X } from "lucide-react";
 
 type ToolbarProps = {
   onFitView: () => void;
@@ -39,10 +39,6 @@ export function MapToolbar({
   const buttonBase =
     "inline-flex items-center gap-2 rounded-sm border border-gray-200 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-600 transition hover:border-black hover:text-black";
   const colorButtonBase = "inline-flex items-center justify-center text-xs font-medium uppercase tracking-wide";
-
-  const handleExport = () => {
-    onExport();
-  };
 
 
   const lastSwatchClass = (() => {
@@ -117,10 +113,6 @@ export function MapToolbar({
             </div>
           )}
         </div>
-        <button className={buttonBase} type="button" onClick={handleExport} aria-label="Export">
-          <Download className="h-3.5 w-3.5" />
-          导出
-        </button>
         <button className={buttonBase} type="button" onClick={() => setIsHelpOpen(true)} aria-label="Usage">
           <HelpCircle className="h-3.5 w-3.5" />
           说明
