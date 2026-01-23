@@ -458,6 +458,8 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         nodeTypes={nodeTypes}
         onInit={setReactFlowInstance}
         onNodeDragStop={(_, node) => updateNodePosition(node.id, node.position.x, node.position.y)}
+        onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+        onPaneClick={() => setSelectedNodeId(null)}
         nodesConnectable={false}
         nodesDraggable={false}
         fitView

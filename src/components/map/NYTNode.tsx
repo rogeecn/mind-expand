@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import { memo } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 
 export type NYTNodeData = {
@@ -14,7 +15,7 @@ export type NYTNodeData = {
   hasChildren?: boolean;
 };
 
-export function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
+export const NYTNode = memo(function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
   return (
     <div
       role="button"
@@ -27,17 +28,17 @@ export function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
       }}
       onClick={() => data.onSelect?.()}
       className={clsx(
-        "group relative flex h-[50px] w-auto min-w-[220px] max-w-[360px] items-center justify-center rounded-sm border px-6 text-center text-ink transition-all duration-300",
+        "group relative flex h-[50px] w-auto min-w-[220px] max-w-[360px] items-center justify-center rounded-sm border px-6 text-center text-ink transition-all duration-200 focus:outline-none",
         selected
-          ? "border-2 border-black"
-          : "border-gray-300 hover:border-black hover:shadow-sm",
+          ? "border-2 border-black shadow-md bg-white z-10"
+          : "border-gray-300 hover:border-gray-500 hover:shadow-sm bg-white",
         data.collapsed && data.hasChildren && "shadow-[3px_3px_0_white,4px_4px_0_#000,7px_7px_0_white,8px_8px_0_#000]",
         !data.collapsed && !selected && "shadow-[1px_1px_0_rgba(0,0,0,0.05)]",
-        !data.colorTag && "bg-white",
-        data.colorTag === "ink" && "bg-ink text-white",
-        data.colorTag === "amber" && "bg-amber-100",
-        data.colorTag === "sky" && "bg-sky-100",
-        data.colorTag === "mint" && "bg-emerald-100"
+        // Color tags override background
+        data.colorTag === "ink" && "bg-ink text-white border-ink",
+        data.colorTag === "amber" && "bg-amber-100 border-amber-200",
+        data.colorTag === "sky" && "bg-sky-100 border-sky-200",
+        data.colorTag === "mint" && "bg-emerald-100 border-emerald-200"
       )}
     >
       <Handle
@@ -71,4 +72,4 @@ export function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
       />
     </div>
   );
-}
+});
