@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import clsx from "clsx";
-import { ChevronUp, Copy, Maximize2, Minimize2, X } from "lucide-react";
+import { ChevronUp, Copy, Maximize2, Minimize2, X, MessageSquare, ArrowRight, Trash2 } from "lucide-react";
 import { Markdown } from "@/components/common/Markdown";
 import { db, type ChatMessageRecord, type NodeRecord } from "@/lib/db";
 import { expandChatAction } from "@/app/actions/expand-chat";
 import { createId } from "@/lib/uuid";
 
+// ... StrategyType and PROMPT_TABS definitions remain the same ...
 type StrategyType =
   | "structural"
   | "causal"
@@ -71,7 +72,7 @@ const buildAssistantMarkdown = (response: {
     `**${response.core_insight}**`,
     ...blocks,
     response.mental_model_tip ? `> ${response.mental_model_tip}` : null,
-    response.further_questions.length > 0 ? `后续问题:\n${questions}` : null
+    response.further_questions.length > 0 ? `### 后续思考\n${questions}` : null
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -89,7 +90,9 @@ export function NodeDetailsPanel({
   pathContext,
   onClose
 }: NodeDetailsPanelProps) {
-  const [expanded, setExpanded] = useState(false);
+  // Mode: 'summary' (default, compact) | 'chat' (expanded, interactive)
+  const [viewMode, setViewMode] = useState<"summary" | "chat">("summary");
+  const [expanded, setExpanded] = useState(false); // Controls height in Chat mode
   const [activePrompt, setActivePrompt] = useState<StrategyType | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [draft, setDraft] = useState("");
@@ -104,12 +107,16 @@ export function NodeDetailsPanel({
       .sortBy("createdAt");
   }, [node.id, node.topicId]);
 
+  // Reset state when node changes
   useEffect(() => {
     setDraft("");
     setIsLoading(false);
     setError(null);
     setActivePrompt(null);
     setIsFullscreen(false);
+    // Reset to summary mode when switching nodes, unless we want to persist the "chatting" state?
+    // Let's reset to summary for "Editorial" feel (clean slate).
+    setViewMode("summary"); 
   }, [node.id]);
 
   useEffect(() => {
@@ -152,6 +159,7 @@ export function NodeDetailsPanel({
     await db.chatMessages.delete(messageId);
   };
 
+  // ... sendAssistantReply implementation ...
   const sendAssistantReply = async (payload: {
     strategy: StrategyType;
     intensity: number;
@@ -249,52 +257,77 @@ export function NodeDetailsPanel({
     void handleSendMessage();
   };
 
-  const renderEmptyState = () => (
-    <p className="text-sm text-gray-400">选择预设联想或输入问题开始对话。</p>
-  );
+  const handleDeleteNode = async () => {
+     // Optional: Call a prop to delete node, but currently logic is in MapCanvas.
+     // We can just close for now or implement delete context if passed.
+     // For safety, let's just Close.
+     onClose();
+  };
 
-  const renderLoadingIndicator = () => (
-    <div className="mt-3 flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-gray-400">
-      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-400" />
-      <span className="flex items-center gap-2">
-        <span>AI 正在生成</span>
-        <span className="flex items-center gap-1">
-          <span className="h-1 w-1 animate-pulse rounded-full bg-gray-400" style={{ animationDelay: "0ms" }} />
-          <span className="h-1 w-1 animate-pulse rounded-full bg-gray-400" style={{ animationDelay: "150ms" }} />
-          <span className="h-1 w-1 animate-pulse rounded-full bg-gray-400" style={{ animationDelay: "300ms" }} />
-        </span>
-      </span>
-    </div>
-  );
 
-  const renderErrorIndicator = (message: string) => (
-    <p className="mt-3 text-xs text-amber-600">{message}</p>
-  );
+  // --- Render Modes ---
 
+  if (viewMode === "summary") {
+    return (
+      <aside className="pointer-events-auto absolute bottom-8 left-1/2 z-30 w-[500px] max-w-[90vw] -translate-x-1/2 rounded-sm border border-gray-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur transition-all duration-300">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1 min-w-0">
+             <p className="font-sans text-xs leading-relaxed text-gray-500 line-clamp-2">
+               {node.description || "无额外描述"}
+             </p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0 pl-4 border-l border-gray-100">
+             <button
+               onClick={() => setViewMode("chat")}
+               className="flex items-center gap-1.5 text-ink hover:text-black transition group"
+               title="进入研讨"
+             >
+               <MessageSquare className="w-4 h-4" />
+               <span className="text-[10px] font-bold uppercase tracking-widest group-hover:underline">研讨</span>
+             </button>
+             <button
+               onClick={onClose}
+               className="flex items-center gap-1.5 text-gray-400 hover:text-red-600 transition"
+               title="关闭"
+             >
+               <X className="w-4 h-4" />
+             </button>
+          </div>
+        </div>
+      </aside>
+    );
+  }
+
+  // Chat Mode
   return (
     <aside
       className={clsx(
-        "pointer-events-auto absolute bottom-0 left-0 right-0 z-30 grid grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden border-t border-gray-900 bg-[#F9F9F7]",
-        isFullscreen ? "top-0 h-full" : expanded ? "h-[75vh]" : "h-[33vh]"
+        "pointer-events-auto absolute bottom-0 left-0 right-0 z-30 grid grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden border-t border-gray-900 bg-[#F9F9F7] transition-all duration-300 ease-in-out",
+        isFullscreen ? "top-0 h-full" : expanded ? "h-[75vh]" : "h-[45vh]"
       )}
     >
-      <div className="flex items-start justify-between border-b border-gray-200 bg-[#F9F9F7] px-6 py-4">
-        <div className="max-w-[70%]">
-          <h3 className="line-clamp-1 font-serif text-3xl font-bold tracking-tight text-ink" title={node.title}>
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-gray-200 bg-[#F9F9F7] px-6 py-3">
+        <div className="flex items-center gap-4 max-w-[70%]">
+          <h3 className="line-clamp-1 font-serif text-xl font-bold tracking-tight text-ink">
             {node.title}
           </h3>
-          <p
-            className="mt-2 line-clamp-2 text-sm text-gray-600 font-sans"
-            title={node.description || "暂无描述"}
-          >
-            {node.description || "暂无描述"}
-          </p>
+          <span className="h-4 w-px bg-gray-300"></span>
+          <span className="text-xs font-sans text-gray-500 uppercase tracking-wider">研讨模式</span>
         </div>
         <div className="flex items-center gap-3">
           <button
             type="button"
+            onClick={() => setViewMode("summary")}
+            className="text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-black hover:underline"
+          >
+            返回摘要
+          </button>
+          <div className="h-4 w-px bg-gray-300 mx-1"></div>
+          <button
+            type="button"
             onClick={() => setIsFullscreen((prev) => !prev)}
-            className="flex h-8 w-8 items-center justify-center border border-gray-300 text-gray-500 transition hover:border-black hover:text-black"
+            className="flex h-8 w-8 items-center justify-center text-gray-400 hover:text-black transition"
             title={isFullscreen ? "退出全屏" : "全屏"}
           >
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -303,90 +336,89 @@ export function NodeDetailsPanel({
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
             className={clsx(
-              "flex h-8 w-8 items-center justify-center border text-gray-500 transition hover:border-black hover:text-black",
-              isFullscreen ? "cursor-not-allowed opacity-40" : "border-gray-300"
+              "flex h-8 w-8 items-center justify-center text-gray-400 hover:text-black transition",
+              isFullscreen ? "opacity-20 cursor-not-allowed" : ""
             )}
             disabled={isFullscreen}
             title="展开/收起"
           >
-            <ChevronUp className={clsx("h-4 w-4 transition", expanded && "rotate-180")} />
+            <ChevronUp className={clsx("h-4 w-4 transition duration-300", expanded && "rotate-180")} />
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center border border-gray-300 text-gray-500 transition hover:border-black hover:text-black"
+            className="flex h-8 w-8 items-center justify-center text-gray-400 hover:text-red-600 transition"
             title="关闭"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
       </div>
-      <div className="min-h-0 overflow-y-auto px-6 py-5">
-        <div className="space-y-6">
-          {displayMessages.length === 0
-            ? renderEmptyState()
-            : displayMessages.map((message) => {
-                const isUser = message.role === "user";
-                  const actionClass = clsx(
-                    "flex h-6 w-6 items-center justify-center border text-[10px] transition",
-                    "border-gray-200 text-gray-500 hover:border-black hover:text-black"
-                  );
-                const nameClass = isUser ? "text-amber-700" : "text-sky-700";
-                const contentClass = isUser ? "text-ink" : "text-gray-700";
 
+      {/* Messages Area */}
+      <div className="min-h-0 overflow-y-auto px-6 py-6 bg-white">
+        <div className="space-y-8 max-w-4xl mx-auto">
+          {displayMessages.length === 0 ? (
+            <div className="text-center py-12">
+               <p className="font-serif text-xl italic text-gray-400 mb-2">"思考是灵魂的自我对话"</p>
+               <p className="text-sm text-gray-400 font-sans">选择下方策略，开始深入研讨。</p>
+            </div>
+          ) : (
+            displayMessages.map((message) => {
+                const isUser = message.role === "user";
+                const actionClass = clsx(
+                  "flex h-6 w-6 items-center justify-center border text-[10px] transition",
+                  "border-gray-100 text-gray-400 hover:border-gray-900 hover:text-gray-900"
+                );
+                
                 return (
-                  <div key={message.id} className="group w-full border-b border-gray-200/70 pb-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className={clsx("text-[11px] uppercase tracking-[0.3em]", nameClass)}>
+                  <div key={message.id} className="group w-full pb-2">
+                    <div className="flex items-baseline justify-between gap-4 mb-3 border-b border-gray-100 pb-2">
+                      <div className="flex items-center gap-3">
+                        <span className={clsx("text-[10px] font-bold uppercase tracking-[0.2em]", isUser ? "text-amber-800" : "text-black")}>
                           {isUser ? "读者" : "编辑部"}
                         </span>
                         {!isUser && message.sourceLabel && (
-                          <span className="text-[10px] uppercase tracking-[0.3em] text-gray-400">
+                          <span className="text-[9px] font-medium uppercase tracking-wider text-gray-400 bg-gray-50 px-2 py-0.5 rounded-sm">
                             {message.sourceLabel}
                           </span>
                         )}
                       </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <button onClick={() => handleCopy(message.content)} className={actionClass} title="复制"><Copy className="h-3 w-3" /></button>
+                         <button onClick={() => handleDeleteMessage(message.id)} className={actionClass} title="删除"><Trash2 className="h-3 w-3" /></button>
+                      </div>
                     </div>
+                    
                     {isUser ? (
-                      <p className={clsx("mt-3 whitespace-pre-line text-sm leading-relaxed", contentClass)}>
+                      <p className="font-serif text-lg leading-relaxed text-ink pl-4 border-l-2 border-amber-200">
                         {message.content}
                       </p>
                     ) : (
-                      <div className="mt-4 space-y-4">
-                        <div className="border-l-2 border-ink/80 pl-4">
-                          <Markdown content={message.content} className={clsx("space-y-4", contentClass)} />
-                        </div>
+                      <div className="pl-4">
+                        <Markdown content={message.content} />
                       </div>
                     )}
-                    <div className="mt-4 flex items-center gap-2 opacity-0 transition group-hover:opacity-100">
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(message.content)}
-                        className={actionClass}
-                        title="复制"
-                      >
-                        <Copy className="h-2.5 w-2.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteMessage(message.id)}
-                        className={actionClass}
-                        title="删除"
-                      >
-                        <X className="h-2.5 w-2.5" />
-                      </button>
-                    </div>
-                    {isLoading && isUser && message.id === lastUserMessageId && renderLoadingIndicator()}
-                    {error && isUser && message.id === lastUserMessageId && renderErrorIndicator(error)}
+                    
+                    {isLoading && isUser && message.id === lastUserMessageId && (
+                       <div className="mt-4 pl-4 text-xs font-bold uppercase tracking-widest text-gray-400 animate-pulse">
+                         撰写中...
+                       </div>
+                    )}
+                    {error && isUser && message.id === lastUserMessageId && (
+                       <p className="mt-2 text-xs text-red-600">{error}</p>
+                    )}
                   </div>
                 );
-              })}
+              })
+          )}
         </div>
       </div>
-      <div className="border-t border-gray-200/80 bg-white/80 px-6 pt-6 pb-6 backdrop-blur">
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2">
+
+      {/* Footer Controls */}
+      <div className="border-t border-gray-200 bg-[#F9F9F7] px-6 py-4">
+        <div className="max-w-4xl mx-auto space-y-4">
+          <div className="flex flex-wrap gap-2 justify-center">
             {PROMPT_TABS.map((tab) => (
               <button
                 key={tab.type}
@@ -394,10 +426,10 @@ export function NodeDetailsPanel({
                 onClick={() => handleSendPrompt(tab.type)}
                 disabled={isLoading}
                 className={clsx(
-                  "border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.1em] transition shadow-[2px_2px_0_rgba(0,0,0,0.1)] hover:shadow-[1px_1px_0_rgba(0,0,0,0.1)] hover:translate-x-[1px] hover:translate-y-[1px] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none",
+                  "border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] transition-all",
                   activePrompt === tab.type
                     ? "border-black bg-black text-white"
-                    : "border-gray-300 bg-white text-gray-600 hover:border-black hover:text-black",
+                    : "border-gray-300 bg-white text-gray-500 hover:border-black hover:text-black",
                   isLoading && "cursor-not-allowed opacity-50"
                 )}
               >
@@ -405,19 +437,27 @@ export function NodeDetailsPanel({
               </button>
             ))}
           </div>
-          <div className="rounded-sm border border-gray-200 bg-[#FCFCFA] px-3 py-1.5 leading-none shadow-[inset_0_1px_0_rgba(0,0,0,0.04)]">
+          <div className="relative group">
             <textarea
               ref={textareaRef}
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="输入你的问题"
+              placeholder="输入你的问题..."
               rows={1}
-              className="w-full resize-none bg-transparent text-sm text-gray-700 outline-none"
+              className="w-full resize-none bg-white border border-gray-300 p-4 pr-12 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-colors"
             />
+            <button
+               onClick={handleSendMessage}
+               disabled={!draft.trim() || isLoading}
+               className="absolute right-3 bottom-3 p-1.5 text-gray-400 hover:text-black disabled:opacity-30 disabled:hover:text-gray-400 transition"
+            >
+               <ArrowRight className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </div>
     </aside>
   );
 }
+
