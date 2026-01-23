@@ -273,7 +273,7 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
   // STEP 3: THE DEFINITION (Review & Create)
   if (step === 3) {
     return (
-      <div className="mx-auto w-full max-w-4xl px-6 py-12">
+      <div className="mx-auto w-full max-w-3xl px-6 py-12">
          <div className="flex items-center justify-between mb-12 border-b border-gray-200 pb-6">
            <div>
              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 mb-2 block">Project Definition</span>
@@ -286,54 +286,48 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
            </button>
          </div>
 
-         <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
-            {/* Main Content */}
-            <div className="md:col-span-8 space-y-10">
-               <section>
-                 <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-3">
-                   Core Thesis
-                 </label>
-                 <textarea
-                   ref={descriptionRef}
-                   value={description}
-                   onChange={(e) => setDescription(e.target.value)}
-                   className="w-full resize-none bg-transparent font-serif text-lg leading-relaxed text-gray-800 focus:outline-none border-l-2 border-transparent focus:border-gray-200 pl-0 focus:pl-4 transition-all"
-                   placeholder="Enter description..."
-                   rows={3}
-                 />
-               </section>
+         <div className="space-y-12">
+             <section>
+               <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4">
+                 Core Thesis
+               </label>
+               <textarea
+                 ref={descriptionRef}
+                 value={description}
+                 onChange={(e) => setDescription(e.target.value)}
+                 className="w-full resize-none bg-transparent font-serif text-lg leading-relaxed text-gray-800 focus:outline-none border-l-2 border-transparent focus:border-gray-200 pl-0 focus:pl-4 transition-all"
+                 placeholder="Enter description..."
+                 rows={3}
+               />
+             </section>
 
-               <section>
-                 <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-3">
-                    Boundaries & Constraints
-                 </label>
-                 <textarea
-                   ref={constraintsRef}
-                   value={globalConstraints ?? ""}
-                   onChange={(e) => setGlobalConstraints(e.target.value)}
-                   className="w-full resize-none bg-gray-50/50 p-4 rounded-sm font-sans text-sm leading-relaxed text-gray-600 focus:outline-none focus:bg-gray-50 transition-colors"
-                   placeholder="Enter constraints..."
-                   rows={3}
-                 />
-               </section>
-            </div>
+             <section>
+               <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4">
+                  Boundaries & Constraints
+               </label>
+               <textarea
+                 ref={constraintsRef}
+                 value={globalConstraints ?? ""}
+                 onChange={(e) => setGlobalConstraints(e.target.value)}
+                 className="w-full resize-none bg-transparent font-sans text-base leading-relaxed text-gray-600 focus:outline-none border-l-2 border-transparent focus:border-gray-200 pl-0 focus:pl-4 transition-all"
+                 placeholder="Enter constraints..."
+                 rows={3}
+               />
+             </section>
 
-            {/* Sidebar */}
-            <div className="md:col-span-4 space-y-8 border-l border-gray-100 pl-8 md:pl-12">
-               <section>
-                 <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4">
-                   Suggested Focus
-                 </label>
-                 <textarea
-                    ref={focusRef}
-                    value={suggestedFocusText}
-                    onChange={(e) => setSuggestedFocusText(e.target.value)}
-                    className="w-full resize-none bg-transparent font-sans text-sm text-gray-600 focus:outline-none leading-7"
-                    placeholder="Enter focus points..."
-                    rows={6}
-                 />
-               </section>
-            </div>
+             <section>
+               <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4">
+                 Suggested Focus
+               </label>
+               <textarea
+                  ref={focusRef}
+                  value={suggestedFocusText}
+                  onChange={(e) => setSuggestedFocusText(e.target.value)}
+                  className="w-full resize-none bg-transparent font-sans text-base leading-relaxed text-gray-600 focus:outline-none border-l-2 border-transparent focus:border-gray-200 pl-0 focus:pl-4 transition-all"
+                  placeholder="Enter focus points..."
+                  rows={4}
+               />
+             </section>
          </div>
 
          <div className="mt-16 pt-8 border-t border-gray-200 flex justify-end">
