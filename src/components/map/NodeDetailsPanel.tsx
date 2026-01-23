@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import clsx from "clsx";
-import { ChevronUp, Copy, Maximize2, Minimize2, X, MessageSquare, ArrowRight, Trash2 } from "lucide-react";
+import { ChevronUp, Copy, Maximize2, Minimize2, X, MessageSquare, ArrowRight, Trash2, Check } from "lucide-react";
 import { Markdown } from "@/components/common/Markdown";
 import { db, type ChatMessageRecord, type NodeRecord } from "@/lib/db";
 import { expandChatAction } from "@/app/actions/expand-chat";
@@ -98,6 +98,7 @@ export function NodeDetailsPanel({
   const [draft, setDraft] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const messages = useLiveQuery(async () => {
@@ -147,11 +148,38 @@ export function NodeDetailsPanel({
     return lastUser?.id ?? null;
   }, [displayMessages]);
 
-  const handleCopy = async (content: string) => {
+  const handleCopy = async (messageId: string, content: string) => {
+    let success = false;
+
     try {
-      await navigator.clipboard.writeText(content);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(content);
+        success = true;
+      }
     } catch (copyError) {
-      console.error("Failed to copy chat message", copyError);
+      console.warn("Clipboard API failed, falling back", copyError);
+    }
+
+    if (!success) {
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = content;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "absolute";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.select();
+        const result = document.execCommand("copy");
+        document.body.removeChild(textarea);
+        success = result;
+      } catch (fallbackError) {
+        console.error("Failed to copy chat message", fallbackError);
+      }
+    }
+
+    if (success) {
+      setCopiedMessageId(messageId);
+      window.setTimeout(() => setCopiedMessageId(null), 1600);
     }
   };
 
@@ -386,7 +414,13 @@ export function NodeDetailsPanel({
                         )}
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <button onClick={() => handleCopy(message.content)} className={actionClass} title="复制"><Copy className="h-3 w-3" /></button>
+                         <button
+                           onClick={() => handleCopy(message.id, message.content)}
+                           className={clsx(actionClass, copiedMessageId === message.id && "border-green-500 text-green-600")}
+                           title={copiedMessageId === message.id ? "已复制" : "复制"}
+                         >
+                           {copiedMessageId === message.id ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                         </button>
                          <button onClick={() => handleDeleteMessage(message.id)} className={actionClass} title="删除"><Trash2 className="h-3 w-3" /></button>
                       </div>
                     </div>
