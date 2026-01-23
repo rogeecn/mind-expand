@@ -124,6 +124,7 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
 
   const resizeTextarea = (element: HTMLTextAreaElement | null) => {
     if (!element) return;
+    // Reset height to auto to correctly calculate new scrollHeight (allows shrinking)
     element.style.height = "auto";
     element.style.height = `${element.scrollHeight}px`;
     element.style.overflowY = "hidden";
@@ -131,15 +132,15 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
 
   useEffect(() => {
     resizeTextarea(descriptionRef.current);
-  }, [description]);
+  }, [description, step]); // Re-run when step changes (mounted)
 
   useEffect(() => {
     resizeTextarea(constraintsRef.current);
-  }, [globalConstraints]);
+  }, [globalConstraints, step]);
 
   useEffect(() => {
     resizeTextarea(focusRef.current);
-  }, [suggestedFocusText]);
+  }, [suggestedFocusText, step]);
 
   // --- RENDER STEPS ---
 
@@ -295,9 +296,9 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
                  ref={descriptionRef}
                  value={description}
                  onChange={(e) => setDescription(e.target.value)}
-                 className="w-full resize-none bg-transparent font-serif text-lg leading-relaxed text-gray-800 focus:outline-none border-l-2 border-transparent focus:border-gray-200 pl-0 focus:pl-4 transition-all"
+                 className="w-full resize-none bg-transparent font-serif text-lg leading-relaxed text-gray-800 focus:outline-none border-l-2 border-transparent focus:border-gray-200 pl-0 focus:pl-4 transition-all overflow-hidden"
                  placeholder="Enter description..."
-                 rows={3}
+                 rows={1}
                />
              </section>
 
@@ -309,9 +310,9 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
                  ref={constraintsRef}
                  value={globalConstraints ?? ""}
                  onChange={(e) => setGlobalConstraints(e.target.value)}
-                 className="w-full resize-none bg-transparent font-sans text-base leading-relaxed text-gray-600 focus:outline-none border-l-2 border-transparent focus:border-gray-200 pl-0 focus:pl-4 transition-all"
+                 className="w-full resize-none bg-transparent font-sans text-base leading-relaxed text-gray-600 focus:outline-none border-l-2 border-transparent focus:border-gray-200 pl-0 focus:pl-4 transition-all overflow-hidden"
                  placeholder="Enter constraints..."
-                 rows={3}
+                 rows={1}
                />
              </section>
 
@@ -323,9 +324,9 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
                   ref={focusRef}
                   value={suggestedFocusText}
                   onChange={(e) => setSuggestedFocusText(e.target.value)}
-                  className="w-full resize-none bg-transparent font-sans text-base leading-relaxed text-gray-600 focus:outline-none border-l-2 border-transparent focus:border-gray-200 pl-0 focus:pl-4 transition-all"
+                  className="w-full resize-none bg-transparent font-sans text-base leading-relaxed text-gray-600 focus:outline-none border-l-2 border-transparent focus:border-gray-200 pl-0 focus:pl-4 transition-all overflow-hidden"
                   placeholder="Enter focus points..."
-                  rows={4}
+                  rows={1}
                />
              </section>
          </div>
