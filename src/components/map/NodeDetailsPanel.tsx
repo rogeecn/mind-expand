@@ -297,10 +297,10 @@ export function NodeDetailsPanel({
 
   if (viewMode === "summary") {
     return (
-      <aside className="pointer-events-auto absolute bottom-8 left-1/2 z-30 w-[500px] max-w-[90vw] -translate-x-1/2 rounded-sm border border-gray-200 bg-white/95 px-6 py-5 shadow-xl backdrop-blur transition-all duration-300">
+      <aside className="pointer-events-auto absolute bottom-8 left-1/2 z-30 w-[720px] max-w-[95vw] -translate-x-1/2 rounded-sm border border-gray-200 bg-white/95 px-6 py-5 shadow-xl backdrop-blur transition-all duration-300">
         <div className="flex items-start justify-between gap-6">
           <div className="flex-1 min-w-0">
-             <div className="font-sans text-xs leading-relaxed text-gray-600 whitespace-pre-line">
+             <div className="max-h-32 overflow-y-auto pr-2 font-sans text-xs leading-relaxed text-gray-600 whitespace-pre-line">
                {node.description || "无额外描述"}
              </div>
           </div>
@@ -453,7 +453,7 @@ export function NodeDetailsPanel({
       {/* Footer Controls */}
       <div className="border-t border-gray-200 bg-[#F9F9F7] px-6 py-4">
         <div className="max-w-4xl mx-auto space-y-4">
-          <div className="flex flex-wrap gap-2 justify-center">
+          <div className="flex flex-wrap gap-2 justify-start">
             {PROMPT_TABS.map((tab) => (
               <button
                 key={tab.type}
