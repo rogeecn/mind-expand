@@ -5,7 +5,7 @@ import {
   rootDisambiguationAction
 } from "@/app/actions/analyze-topic";
 import clsx from "clsx";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export type TopicFormValues = {
   rootKeyword: string;
@@ -130,15 +130,17 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
     element.style.overflowY = "hidden";
   };
 
-  useEffect(() => {
+  // Use useLayoutEffect to ensure height is calculated synchronously after DOM updates
+  // preventing visual layout shifts or incorrect initial heights
+  useLayoutEffect(() => {
     resizeTextarea(descriptionRef.current);
-  }, [description, step]); // Re-run when step changes (mounted)
+  }, [description, step]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     resizeTextarea(constraintsRef.current);
   }, [globalConstraints, step]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     resizeTextarea(focusRef.current);
   }, [suggestedFocusText, step]);
 
