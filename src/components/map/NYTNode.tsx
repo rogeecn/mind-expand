@@ -55,11 +55,6 @@ export function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
              <span className="node-loading-asterisk font-serif text-2xl leading-none text-black/50">*</span>
            </div>
         )}
-        {!data.isLoading && !data.hasChildren && !data.isRoot && (
-           <div className="absolute -right-5 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100">
-             <span className="text-xs text-gray-400 font-serif italic">+</span>
-           </div>
-        )}
       </div>
       <Handle
         type="source"
