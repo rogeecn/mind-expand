@@ -4,6 +4,7 @@ import {
   rootConsolidationAction,
   rootDisambiguationAction
 } from "@/app/actions/analyze-topic";
+import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 
 export type TopicFormValues = {
@@ -36,6 +37,8 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
   const constraintsRef = useRef<HTMLTextAreaElement | null>(null);
   const focusRef = useRef<HTMLTextAreaElement | null>(null);
 
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+
   const handleAnalyze = async () => {
     if (!rootKeyword.trim()) return;
     setIsAnalyzing(true);
@@ -58,6 +61,7 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
       setMasterTitle(undefined);
       setGlobalConstraints(undefined);
       setSuggestedFocusText("");
+      setStep(2); // Go to Step 2
     } finally {
       setIsAnalyzing(false);
     }
@@ -75,20 +79,21 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
       setMasterTitle(result.master_title);
       setGlobalConstraints(result.global_constraints);
       setSuggestedFocusText((result.suggested_focus ?? []).join("\n"));
+      setStep(3); // Go to Step 3
     } finally {
       setIsConfirming(false);
     }
   };
 
-  const handleRootChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRootKeyword(event.target.value);
+  const handleBackToStep1 = () => {
+    setStep(1);
     setSenseOptions([]);
-    setSenseDescriptions({});
-    setSenseKeyTerms({});
     setSelectedSenses([]);
-    setMasterTitle(undefined);
-    setGlobalConstraints(undefined);
-    setSuggestedFocusText("");
+  };
+
+  const handleBackToStep2 = () => {
+    setStep(2);
+    // Keep selections
   };
 
   const handleCreateTopic = () => {
@@ -136,196 +141,213 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
     resizeTextarea(focusRef.current);
   }, [suggestedFocusText]);
 
-  const hasAnalyzed = senseOptions.length > 0;
+  // --- RENDER STEPS ---
 
-  return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-16">
-        <div className="text-left">
-          {hasAnalyzed ? (
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setRootKeyword("");
-                  setSenseOptions([]);
-                  setSenseDescriptions({});
-                  setSenseKeyTerms({});
-                  setSelectedSenses([]);
-                  setDescription("");
-                  setMasterTitle(undefined);
-                  setGlobalConstraints(undefined);
-                  setSuggestedFocusText("");
-                }}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-black hover:text-black"
-                title="重新开始"
-              >
-                <span className="text-xs">↩</span>
-              </button>
-              <h2 className="font-serif text-3xl font-semibold text-ink">{rootKeyword}</h2>
-            </div>
-          ) : (
-            <h2 className="font-serif text-4xl font-semibold text-ink">
-              输入主题并开始分析
-            </h2>
-          )}
-          <div className="mt-6 h-px w-24 bg-gray-200" />
+  // STEP 1: THE PITCH
+  if (step === 1) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center px-6">
+        <div className="w-full max-w-2xl text-center">
+          <h1 className="font-serif text-5xl font-bold text-ink mb-2">What is on your mind?</h1>
+          <p className="font-sans text-gray-500 mb-12 uppercase tracking-widest text-xs">Start your exploration</p>
+          
+          <div className="relative group">
+            <input
+              id="topic-root"
+              name="topic-root"
+              value={rootKeyword}
+              onChange={(e) => setRootKeyword(e.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                   event.preventDefault();
+                   void handleAnalyze();
+                }
+              }}
+              placeholder="Type a concept..."
+              className="w-full border-b-2 border-gray-200 bg-transparent py-4 text-center font-serif text-4xl text-ink placeholder-gray-300 focus:border-black focus:outline-none transition-all"
+              autoFocus
+            />
+            {isAnalyzing && (
+              <div className="absolute left-0 right-0 -bottom-8 text-center">
+                <span className="text-xs uppercase tracking-[0.3em] text-gray-400 animate-pulse">Analyzing Semantics...</span>
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-12 transition-opacity duration-500 delay-200" style={{ opacity: rootKeyword ? 1 : 0 }}>
+             <button
+               onClick={handleAnalyze}
+               disabled={isAnalyzing || !rootKeyword.trim()}
+               className="bg-ink text-white px-8 py-3 rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+             >
+               Begin
+             </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // STEP 2: THE SCOPE (Context Selection)
+  if (step === 2) {
+    return (
+      <div className="mx-auto w-full max-w-5xl px-6 py-12">
+        <div className="flex items-center justify-between mb-12">
+          <div>
+            <h2 className="font-serif text-3xl font-bold text-ink mb-2">Define Context</h2>
+            <p className="text-gray-500 font-sans text-sm">Which aspects of <strong className="text-ink">"{rootKeyword}"</strong> are relevant?</p>
+          </div>
+          <button onClick={handleBackToStep1} className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black transition">
+            Back
+          </button>
         </div>
 
-      <div className="mt-12 space-y-10 text-left">
-        {!hasAnalyzed && (
-          <section className="space-y-4">
-            <div>
-              <input
-                id="topic-root"
-                name="topic-root"
-                value={rootKeyword}
-                onChange={handleRootChange}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter") return;
-                  event.preventDefault();
-                  if (!rootKeyword.trim() || isAnalyzing || isConfirming) return;
-                  void handleAnalyze();
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {senseOptions.map((option) => {
+             const isSelected = selectedSenses.includes(option);
+             return (
+              <button
+                key={option}
+                onClick={() => {
+                  const newSenses = isSelected
+                    ? selectedSenses.filter(s => s !== option)
+                    : [...selectedSenses, option];
+                  setSelectedSenses(newSenses);
                 }}
-                placeholder="输入主题关键词并回车分析"
-                className="w-full rounded-sm border border-gray-300 bg-white px-4 py-3 text-lg text-ink focus:border-black focus:outline-none"
-              />
-              {(isAnalyzing || isConfirming) && (
-                <p className="mt-2 text-xs uppercase tracking-[0.3em] text-gray-400">
-                  AI 正在分析语义...
-                </p>
-              )}
-            </div>
-          </section>
-        )}
-
-        {hasAnalyzed && !globalConstraints && (
-          <section className="space-y-4">
-            <div className="flex items-center justify-between border-b border-gray-200 pb-3">
-              <h3 className="font-serif text-xl text-ink">选择语义并生成约束</h3>
-            </div>
-
-            <div className="space-y-3">
-              <div className="space-y-2">
-                {senseOptions.map((option) => (
-                  <label
-                    key={option}
-                    className="flex cursor-pointer items-start gap-3 border-b border-gray-200/80 py-3 text-sm text-gray-600 transition hover:text-ink"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedSenses.includes(option)}
-                      onChange={(e) => {
-                        const isChecked = e.target.checked;
-                        let newSenses: string[];
-
-                        if (isChecked) {
-                          newSenses = [...selectedSenses, option];
-                        } else {
-                          newSenses = selectedSenses.filter((sense) => sense !== option);
-                        }
-
-                        setSelectedSenses(newSenses);
-                      }}
-                      className="mt-1 h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
-                    />
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-ink">{option}</p>
-                      {senseDescriptions[option] && (
-                        <p className="text-xs text-gray-500">{senseDescriptions[option]}</p>
-                      )}
-                      {senseKeyTerms[option]?.length ? (
-                        <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
-                          关键词: {senseKeyTerms[option].join(" · ")}
-                        </p>
-                      ) : null}
+                className={clsx(
+                  "relative flex flex-col text-left p-6 rounded-sm border-2 transition-all duration-200 hover:shadow-lg h-full group",
+                  isSelected
+                    ? "border-black bg-ink text-white shadow-xl scale-[1.02]"
+                    : "border-gray-100 bg-white text-ink hover:border-gray-300"
+                )}
+              >
+                <div className="mb-4">
+                  <h3 className={clsx("font-serif text-xl font-bold mb-2 group-hover:underline", isSelected ? "text-white" : "text-ink")}>
+                    {option}
+                  </h3>
+                  {senseKeyTerms[option]?.length ? (
+                    <div className="flex flex-wrap gap-1.5 opacity-80">
+                      {senseKeyTerms[option].slice(0, 3).map(term => (
+                        <span key={term} className={clsx("text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm border", isSelected ? "border-white/30 text-white" : "border-gray-200 text-gray-500")}>
+                          {term}
+                        </span>
+                      ))}
                     </div>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={handleConfirmScopes}
-                disabled={isConfirming || selectedSenses.length === 0}
-                className="rounded-sm border border-gray-300 px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-gray-600 transition hover:border-black hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isConfirming ? "生成中" : "生成约束"}
-              </button>
-            </div>
-          </section>
-        )}
-
-        {(globalConstraints || description || masterTitle || suggestedFocusText.length > 0) && (
-          <section className="space-y-8">
-            <div className="space-y-3">
-              <p className="text-[11px] uppercase tracking-[0.3em] text-gray-500">主标题</p>
-              <input
-                value={masterTitle ?? ""}
-                onChange={(event) => setMasterTitle(event.target.value)}
-                placeholder="输入主标题"
-                className="w-full rounded-sm border border-gray-300 bg-white px-3 py-2 text-base text-ink focus:border-black focus:outline-none"
-              />
-            </div>
-            <div className="space-y-3">
-              <p className="text-[11px] uppercase tracking-[0.3em] text-gray-500">主旨描述</p>
-              <textarea
-                ref={descriptionRef}
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="补充主旨描述"
-                rows={1}
-                className="w-full resize-none rounded-sm border border-gray-300 bg-white px-3 py-2 text-base text-gray-800 focus:border-black focus:outline-none"
-              />
-            </div>
-            <div className="space-y-3">
-              <p className="text-[11px] uppercase tracking-[0.3em] text-gray-500">方向性约束</p>
-              <textarea
-                ref={constraintsRef}
-                value={globalConstraints ?? ""}
-                onChange={(event) => setGlobalConstraints(event.target.value)}
-                placeholder="补充约束或范围"
-                rows={1}
-                className="w-full resize-none rounded-sm border border-gray-300 bg-white px-3 py-2 focus:border-black focus:outline-none"
-              />
-            </div>
-            <div className="space-y-3">
-              <p className="text-[11px] uppercase tracking-[0.3em] text-gray-500">建议方向</p>
-              <textarea
-                ref={focusRef}
-                value={suggestedFocusText}
-                onChange={(event) => setSuggestedFocusText(event.target.value)}
-                placeholder="每行一条建议方向"
-                rows={1}
-                className="w-full resize-none rounded-sm border border-gray-300 bg-white px-3 py-2 focus:border-black focus:outline-none"
-              />
-            </div>
-            <div className="flex items-center justify-between border-t border-gray-200 pt-6">
-              {isCreating && (
-                <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-gray-400">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-400" />
-                  <span>正在创建主题...</span>
+                  ) : null}
                 </div>
-              )}
-              <button
-                className="rounded-sm border border-ink px-8 py-3 font-medium text-ink transition hover:bg-ink hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={handleCreateTopic}
-                type="button"
-                disabled={
-                  isAnalyzing ||
-                  isConfirming ||
-                  isCreating ||
-                  !rootKeyword.trim() ||
-                  !description ||
-                  !globalConstraints
-                }
-              >
-                {isCreating ? "创建中" : "创建主题"}
+                
+                <p className={clsx("text-sm leading-relaxed mt-auto", isSelected ? "text-gray-300" : "text-gray-500")}>
+                  {senseDescriptions[option]}
+                </p>
+
+                {isSelected && (
+                  <div className="absolute top-4 right-4">
+                    <div className="w-3 h-3 bg-white rounded-full shadow-sm" />
+                  </div>
+                )}
               </button>
-            </div>
-          </section>
-        )}
+             );
+          })}
+        </div>
+
+        <div className="mt-12 flex justify-end">
+           <button
+             onClick={handleConfirmScopes}
+             disabled={isConfirming || selectedSenses.length === 0}
+             className="flex items-center gap-3 bg-ink text-white px-10 py-4 rounded-sm text-sm font-bold uppercase tracking-widest hover:bg-black transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+           >
+             {isConfirming ? (
+               <>
+                 <span className="h-2 w-2 bg-white rounded-full animate-pulse" />
+                 Synthesizing...
+               </>
+             ) : (
+               "Generate Scope"
+             )}
+           </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // STEP 3: THE DEFINITION (Review & Create)
+  if (step === 3) {
+    return (
+      <div className="mx-auto w-full max-w-4xl px-6 py-12">
+         <div className="flex items-center justify-between mb-12 border-b border-gray-200 pb-6">
+           <div>
+             <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 mb-2 block">Project Definition</span>
+             <h1 className="font-serif text-4xl font-black text-ink">
+               {masterTitle || rootKeyword}
+             </h1>
+           </div>
+           <button onClick={handleBackToStep2} className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black transition">
+             Back
+           </button>
+         </div>
+
+         <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
+            {/* Main Content */}
+            <div className="md:col-span-8 space-y-10">
+               <section>
+                 <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-3">
+                   Core Thesis
+                 </label>
+                 <textarea
+                   ref={descriptionRef}
+                   value={description}
+                   onChange={(e) => setDescription(e.target.value)}
+                   className="w-full resize-none bg-transparent font-serif text-lg leading-relaxed text-gray-800 focus:outline-none border-l-2 border-transparent focus:border-gray-200 pl-0 focus:pl-4 transition-all"
+                   placeholder="Enter description..."
+                   rows={3}
+                 />
+               </section>
+
+               <section>
+                 <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-3">
+                    Boundaries & Constraints
+                 </label>
+                 <textarea
+                   ref={constraintsRef}
+                   value={globalConstraints ?? ""}
+                   onChange={(e) => setGlobalConstraints(e.target.value)}
+                   className="w-full resize-none bg-gray-50/50 p-4 rounded-sm font-sans text-sm leading-relaxed text-gray-600 focus:outline-none focus:bg-gray-50 transition-colors"
+                   placeholder="Enter constraints..."
+                   rows={3}
+                 />
+               </section>
+            </div>
+
+            {/* Sidebar */}
+            <div className="md:col-span-4 space-y-8 border-l border-gray-100 pl-8 md:pl-12">
+               <section>
+                 <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4">
+                   Suggested Focus
+                 </label>
+                 <textarea
+                    ref={focusRef}
+                    value={suggestedFocusText}
+                    onChange={(e) => setSuggestedFocusText(e.target.value)}
+                    className="w-full resize-none bg-transparent font-sans text-sm text-gray-600 focus:outline-none leading-7"
+                    placeholder="Enter focus points..."
+                    rows={6}
+                 />
+               </section>
+            </div>
+         </div>
+
+         <div className="mt-16 pt-8 border-t border-gray-200 flex justify-end">
+            <button
+               onClick={handleCreateTopic}
+               disabled={isCreating}
+               className="bg-ink text-white px-12 py-4 rounded-sm text-sm font-bold uppercase tracking-widest hover:bg-black hover:scale-[1.02] transition-all shadow-xl disabled:opacity-70 disabled:scale-100"
+            >
+              {isCreating ? "Initializing..." : "Initialize Mind Map"}
+            </button>
+         </div>
+      </div>
+    );
+  }
+
+  return null; // Should not happen
 }
