@@ -4,8 +4,9 @@ import {
   rootConsolidationAction,
   rootDisambiguationAction
 } from "@/app/actions/analyze-topic";
+import { AutoTextarea } from "@/components/common/AutoTextarea";
 import clsx from "clsx";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 export type TopicFormValues = {
   rootKeyword: string;
@@ -33,9 +34,6 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
   const [senseDescriptions, setSenseDescriptions] = useState<Record<string, string>>({});
   const [senseKeyTerms, setSenseKeyTerms] = useState<Record<string, string[]>>({});
   const [selectedSenses, setSelectedSenses] = useState<string[]>([]);
-  const descriptionRef = useRef<HTMLTextAreaElement | null>(null);
-  const constraintsRef = useRef<HTMLTextAreaElement | null>(null);
-  const focusRef = useRef<HTMLTextAreaElement | null>(null);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
@@ -121,28 +119,6 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
       })
     ).finally(() => setIsCreating(false));
   };
-
-  const resizeTextarea = (element: HTMLTextAreaElement | null) => {
-    if (!element) return;
-    // Reset height to auto to correctly calculate new scrollHeight (allows shrinking)
-    element.style.height = "auto";
-    element.style.height = `${element.scrollHeight}px`;
-    element.style.overflowY = "hidden";
-  };
-
-  // Use useLayoutEffect to ensure height is calculated synchronously after DOM updates
-  // preventing visual layout shifts or incorrect initial heights
-  useLayoutEffect(() => {
-    resizeTextarea(descriptionRef.current);
-  }, [description, step]);
-
-  useLayoutEffect(() => {
-    resizeTextarea(constraintsRef.current);
-  }, [globalConstraints, step]);
-
-  useLayoutEffect(() => {
-    resizeTextarea(focusRef.current);
-  }, [suggestedFocusText, step]);
 
   // --- RENDER STEPS ---
 
@@ -294,13 +270,11 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
                <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4">
                  Core Thesis
                </label>
-               <textarea
-                 ref={descriptionRef}
+               <AutoTextarea
                  value={description}
-                 onChange={(e) => setDescription(e.target.value)}
-                 className="w-full resize-none bg-transparent font-serif text-lg leading-relaxed text-gray-800 focus:outline-none border-l-2 border-transparent focus:border-gray-200 pl-0 focus:pl-4 transition-all overflow-hidden"
+                 onValueChange={setDescription}
+                 className="font-serif text-lg leading-relaxed text-gray-800 border-l-2 border-transparent focus:border-gray-200 pl-4 py-1"
                  placeholder="Enter description..."
-                 rows={1}
                />
              </section>
 
@@ -308,13 +282,11 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
                <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4">
                   Boundaries & Constraints
                </label>
-               <textarea
-                 ref={constraintsRef}
+               <AutoTextarea
                  value={globalConstraints ?? ""}
-                 onChange={(e) => setGlobalConstraints(e.target.value)}
-                 className="w-full resize-none bg-transparent font-sans text-base leading-relaxed text-gray-600 focus:outline-none border-l-2 border-transparent focus:border-gray-200 pl-0 focus:pl-4 transition-all overflow-hidden"
+                 onValueChange={(val) => setGlobalConstraints(val)}
+                 className="font-sans text-base leading-relaxed text-gray-600 border-l-2 border-transparent focus:border-gray-200 pl-4 py-1"
                  placeholder="Enter constraints..."
-                 rows={1}
                />
              </section>
 
@@ -322,13 +294,11 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
                <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4">
                  Suggested Focus
                </label>
-               <textarea
-                  ref={focusRef}
+               <AutoTextarea
                   value={suggestedFocusText}
-                  onChange={(e) => setSuggestedFocusText(e.target.value)}
-                  className="w-full resize-none bg-transparent font-sans text-base leading-relaxed text-gray-600 focus:outline-none border-l-2 border-transparent focus:border-gray-200 pl-0 focus:pl-4 transition-all overflow-hidden"
+                  onValueChange={setSuggestedFocusText}
+                  className="font-sans text-base leading-relaxed text-gray-600 border-l-2 border-transparent focus:border-gray-200 pl-4 py-1"
                   placeholder="Enter focus points..."
-                  rows={1}
                />
              </section>
          </div>
