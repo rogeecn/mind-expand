@@ -46,20 +46,20 @@ export function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
         isConnectable={false}
         className="opacity-0 pointer-events-none cursor-default"
       />
-      <div className="min-w-0 relative">
+      <div className="min-w-0 relative flex items-center justify-center gap-2">
         <h3 className="line-clamp-2 break-words text-center font-serif text-lg font-semibold tracking-tight">
           {data.title}
         </h3>
         {data.isLoading && (
-           <div className="absolute -right-6 -bottom-1 flex h-6 w-6 items-center justify-center">
-             <svg
-               className="node-loading-asterisk h-4 w-4 text-black/50"
-               viewBox="0 0 24 24"
-               fill="currentColor"
-               xmlns="http://www.w3.org/2000/svg"
-             >
-               <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
-             </svg>
+           <div className="flex items-center gap-[2px] shrink-0" title="AI 思考中">
+             <div className="loading-dot" />
+             <div className="loading-dot" />
+             <div className="loading-dot" />
+           </div>
+        )}
+        {!data.isLoading && !data.hasChildren && !data.isRoot && (
+           <div className="absolute -right-5 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100">
+             <span className="text-xs text-gray-400 font-serif italic">+</span>
            </div>
         )}
       </div>
