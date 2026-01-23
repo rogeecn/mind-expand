@@ -51,7 +51,7 @@ export function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
           {data.title}
         </h3>
         {data.isLoading && (
-           <div className="flex items-center gap-[2px] shrink-0" title="AI 思考中">
+           <div className="flex items-center gap-[4px] shrink-0" title="AI 思考中">
              <div className="loading-dot" />
              <div className="loading-dot" />
              <div className="loading-dot" />
