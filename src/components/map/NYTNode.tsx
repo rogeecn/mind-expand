@@ -51,7 +51,7 @@ export function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
           {data.title}
         </h3>
         {data.isLoading && (
-           <div className="absolute -right-6 -bottom-1">
+           <div className="absolute -right-6 -bottom-1 flex h-6 w-6 items-center justify-center">
              <span className="node-loading-asterisk font-serif text-2xl leading-none text-black/50">*</span>
            </div>
         )}
