@@ -24,7 +24,7 @@ import { db, type EdgeRecord, type NodeRecord, type TopicStyle } from "@/lib/db"
 import { layoutWithD3Tree } from "@/lib/layout";
 
 import { expandNodeAction } from "@/app/actions/expand-node";
-import { toPng } from "html-to-image";
+import { downloadExport } from "@/components/map/ImportExport";
 import { createId } from "@/lib/uuid";
 
 const nodeTypes: NodeTypes = {
@@ -169,29 +169,9 @@ export function MapCanvas({ topicId }: { topicId: string }) {
     reactFlowInstance?.fitView({ padding: 0.2, duration: 500 });
   };
 
-  const onExport = async () => {
+  const onExport = () => {
     if (!topic) return;
-
-    const canvas = document.querySelector(".react-flow") as HTMLElement | null;
-    if (!canvas) return;
-
-    try {
-      const dataUrl = await toPng(canvas, {
-        backgroundColor: "#f9f9f7",
-        pixelRatio: 2,
-        filter: (node: HTMLElement) => {
-          if (!(node instanceof HTMLElement)) return true;
-          return !node.classList.contains("react-flow__panel") &&
-            !node.classList.contains("react-flow__minimap");
-        }
-      });
-      const link = document.createElement("a");
-      link.download = `${topic.rootKeyword || "mind-map"}.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (error) {
-      console.error("Failed to export PNG", error);
-    }
+    downloadExport({ topic, nodes, edges });
   };
 
 
