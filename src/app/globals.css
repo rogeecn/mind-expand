@@ -49,7 +49,5 @@ a {
 
 .node-loading-asterisk {
   animation: spin-asterisk 2s linear infinite;
-  display: block;
-  line-height: 1;
-  transform-origin: center center;
+  transform-origin: center;
 }

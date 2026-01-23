@@ -52,7 +52,14 @@ export function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
         </h3>
         {data.isLoading && (
            <div className="absolute -right-6 -bottom-1 flex h-6 w-6 items-center justify-center">
-             <span className="node-loading-asterisk font-serif text-2xl leading-none text-black/50">*</span>
+             <svg
+               className="node-loading-asterisk h-4 w-4 text-black/50"
+               viewBox="0 0 24 24"
+               fill="currentColor"
+               xmlns="http://www.w3.org/2000/svg"
+             >
+               <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
+             </svg>
            </div>
         )}
       </div>
