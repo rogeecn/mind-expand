@@ -20,12 +20,6 @@ export const NYTNode = memo(function NYTNode({ data, selected }: NodeProps<NYTNo
     <div
       role="button"
       tabIndex={0}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          data.onSelect?.();
-        }
-      }}
       onClick={() => data.onSelect?.()}
       className={clsx(
         "group relative flex h-[50px] w-auto min-w-[220px] max-w-[360px] items-center justify-center rounded-sm border px-6 text-center text-ink transition-all duration-200 focus:outline-none",
