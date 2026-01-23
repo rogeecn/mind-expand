@@ -156,27 +156,28 @@ export function NodeDetailsPanel({
     strategy: StrategyType;
     intensity: number;
     question?: string;
+    includeHistory?: boolean;
   }) => {
     const fullPath =
       pathContext.length > 1 ? pathContext.slice(0, -1).join(" -> ") : pathContext[0] ?? node.title;
-    
-    // Fetch recent history from DB to ensure we have the latest user message
-    const recentMessages = await db.chatMessages
-      .where("[topicId+nodeId]")
-      .equals([node.topicId, node.id])
-      .sortBy("createdAt");
-    
-    // Take last 10 messages for context, format for API
-    const history = recentMessages.slice(-10).map(msg => ({
-      role: msg.role,
-      content: msg.content
-    }));
 
-    // If we have a question/history, we don't need to append the question to the node title
-    // The AI will see the user's last message in the history
+    let history: { role: string; content: string }[] | undefined;
+    if (payload.includeHistory !== false) {
+      const recentMessages = await db.chatMessages
+        .where("[topicId+nodeId]")
+        .equals([node.topicId, node.id])
+        .sortBy("createdAt");
+
+      history = recentMessages.slice(-10).map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+    }
+
     const currentNode = node.title;
 
     const response = await expandChatAction({
+      mode: payload.question ? "intent" : "strategy",
       full_path: fullPath,
       current_node: currentNode,
       strategy: payload.strategy,
@@ -207,7 +208,7 @@ export function NodeDetailsPanel({
     await db.chatMessages.put(userMessage);
     try {
       const depth = Math.min(pathContext.length + 1, 5);
-      await sendAssistantReply({ strategy: promptType, intensity: depth });
+      await sendAssistantReply({ strategy: promptType, intensity: depth, includeHistory: false });
     } catch (requestError) {
       console.error("Failed to generate chat reply", requestError);
       setError("生成失败，请重试。");
@@ -233,7 +234,7 @@ export function NodeDetailsPanel({
     await db.chatMessages.put(userMessage);
     try {
       const depth = Math.min(pathContext.length + 1, 5);
-      await sendAssistantReply({ strategy: selectedStrategy, intensity: depth, question: trimmed });
+      await sendAssistantReply({ strategy: selectedStrategy, intensity: depth, question: trimmed, includeHistory: true });
     } catch (requestError) {
       console.error("Failed to generate chat reply", requestError);
       setError("生成失败，请重试。");
