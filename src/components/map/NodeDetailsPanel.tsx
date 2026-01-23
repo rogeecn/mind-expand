@@ -269,17 +269,17 @@ export function NodeDetailsPanel({
 
   if (viewMode === "summary") {
     return (
-      <aside className="pointer-events-auto absolute bottom-8 left-1/2 z-30 w-[500px] max-w-[90vw] -translate-x-1/2 rounded-sm border border-gray-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur transition-all duration-300">
-        <div className="flex items-center justify-between gap-4">
+      <aside className="pointer-events-auto absolute bottom-8 left-1/2 z-30 w-[500px] max-w-[90vw] -translate-x-1/2 rounded-sm border border-gray-200 bg-white/95 px-6 py-5 shadow-xl backdrop-blur transition-all duration-300">
+        <div className="flex items-start justify-between gap-6">
           <div className="flex-1 min-w-0">
-             <p className="font-sans text-xs leading-relaxed text-gray-500 line-clamp-2">
+             <div className="font-sans text-xs leading-relaxed text-gray-600 whitespace-pre-line">
                {node.description || "无额外描述"}
-             </p>
+             </div>
           </div>
-          <div className="flex items-center gap-3 shrink-0 pl-4 border-l border-gray-100">
+          <div className="flex flex-col gap-3 shrink-0 pt-1 border-l border-gray-100 pl-4">
              <button
                onClick={() => setViewMode("chat")}
-               className="flex items-center gap-1.5 text-ink hover:text-black transition group"
+               className="flex items-center gap-2 text-ink hover:text-black transition group"
                title="进入研讨"
              >
                <MessageSquare className="w-4 h-4" />
@@ -287,10 +287,11 @@ export function NodeDetailsPanel({
              </button>
              <button
                onClick={onClose}
-               className="flex items-center gap-1.5 text-gray-400 hover:text-red-600 transition"
+               className="flex items-center gap-2 text-gray-400 hover:text-red-600 transition group"
                title="关闭"
              >
                <X className="w-4 h-4" />
+               <span className="text-[10px] font-bold uppercase tracking-widest group-hover:underline">关闭</span>
              </button>
           </div>
         </div>
