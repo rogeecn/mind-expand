@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import clsx from "clsx";
 import { ChevronUp, Copy, Maximize2, Minimize2, X, MessageSquare, ArrowRight, Trash2, Check } from "lucide-react";
+import { AutoTextarea } from "@/components/common/AutoTextarea";
 import { Markdown } from "@/components/common/Markdown";
 import { db, type ChatMessageRecord, type NodeRecord } from "@/lib/db";
 import { expandChatAction } from "@/app/actions/expand-chat";
@@ -99,7 +100,6 @@ export function NodeDetailsPanel({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const messages = useLiveQuery(async () => {
     return db.chatMessages
@@ -121,13 +121,7 @@ export function NodeDetailsPanel({
   }, [node.id]);
 
   useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = "auto";
-    const maxHeight = 22 * 5 + 16;
-    const nextHeight = Math.min(textarea.scrollHeight, maxHeight);
-    textarea.style.height = `${nextHeight}px`;
-    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+    // AutoTextarea handles resizing; this is reserved if we need extra draft behavior later.
   }, [draft]);
 
   const displayMessages = useMemo<ChatDisplayMessage[]>(() => {
@@ -473,14 +467,12 @@ export function NodeDetailsPanel({
             ))}
           </div>
           <div className="relative group">
-            <textarea
-              ref={textareaRef}
+            <AutoTextarea
               value={draft}
-              onChange={(event) => setDraft(event.target.value)}
+              onValueChange={setDraft}
               onKeyDown={handleKeyDown}
               placeholder="输入你的问题..."
-              rows={1}
-              className="w-full resize-none bg-white border border-gray-300 p-4 pr-12 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-colors"
+              className="w-full border border-gray-300 p-4 pr-12 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-colors"
             />
             <button
                onClick={handleSendMessage}
