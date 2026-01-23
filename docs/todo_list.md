@@ -48,3 +48,15 @@
   - [ ] TopicForm 调整为两步流程
   - [ ] Topic 数据新增 `masterTitle`/`globalConstraints`/`suggestedFocus`
   - [ ] 下游扩展注入 `globalConstraints`
+
+- [ ] **Phase 6: Optimization & Polish**
+  - [ ] **Visual Consistency ("Editorial" Aesthetic)**
+    - [ ] Refine `TopicSidebar`: Sharp corners (`rounded-sm`), high contrast borders, `Playfair Display` for list items.
+    - [ ] Refine `NodeDetailsPanel`: Sharp corners, remove excess shadows, match "Newspaper" feel.
+    - [ ] Refine `NYTNode`: Replace "glowing orange" loading with rotating serif asterisk (*).
+  - [ ] **Interaction Simplification**
+    - [ ] `NYTNode`: Visual indicator for "Has Children (Collapsed)" vs "Leaf (Generate AI)".
+    - [ ] Extract Keyboard Navigation to `useKeyboardNavigation` hook.
+  - [ ] **Performance Optimization**
+    - [ ] Optimize `MapCanvas` re-renders (Memoize `visibleNodes` calculation more strictly).
+    - [ ] Decouple Layout: Prevent "Double Layout" (Action vs Effect).

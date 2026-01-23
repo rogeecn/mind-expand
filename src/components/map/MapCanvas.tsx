@@ -17,6 +17,7 @@ import { CompactNode } from "@/components/map/CompactNode";
 import { MapToolbar } from "@/components/map/MapToolbar";
 import { NodeDetailsPanel } from "@/components/map/NodeDetailsPanel";
 import { NYTNode } from "@/components/map/NYTNode";
+import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation";
 import { useMapData } from "@/hooks/useMapData";
 import { useTopic } from "@/hooks/useTopic";
 import { db, type EdgeRecord, type NodeRecord, type TopicStyle } from "@/lib/db";
@@ -40,7 +41,8 @@ function mapNodeToFlow(
   node: NodeRecord,
   onSelect: (nodeId: string) => void,
   isLoading: boolean,
-  isSelected: boolean
+  isSelected: boolean,
+  hasChildren: boolean
 ) {
   return {
     id: node.id,
@@ -54,6 +56,7 @@ function mapNodeToFlow(
       colorTag: node.colorTag ?? null,
       collapsed: node.collapsed ?? false,
       isLoading,
+      hasChildren,
       onSelect: () => onSelect(node.id)
     }
   } satisfies Node;
@@ -75,8 +78,17 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   const [pendingNodeIds, setPendingNodeIds] = useState<Set<string>>(new Set());
 
   // Calculate visible nodes based on collapsed state
+  // MEMOIZATION OPTIMIZATION:
+  // Instead of recalculating on every `nodes` change (which happens on ANY db update),
+  // we should try to be stable.
+  // However, `nodes` comes from useLiveQuery, which returns a new array every time.
+  // We can use a deep equality check or JSON.stringify, but that's expensive.
+  // Better: The logic inside is fast enough (O(N)), but we can prevent downstream effects
+  // by using a ref to store the last result and only returning a new object if IDs changed.
+  
   const { visibleNodeIds, visibleNodes } = useMemo(() => {
     const visible = new Set<string>();
+    // ... logic ...
     const nodeMap = new Map(nodes.map(n => [n.id, n]));
     const childrenMap = new Map<string, NodeRecord[]>();
 
@@ -104,7 +116,12 @@ export function MapCanvas({ topicId }: { topicId: string }) {
       }
     }
     return { visibleNodeIds: visible, visibleNodes: resultNodes };
-  }, [nodes]);
+  }, [
+    // We depend on 'nodes' content. Since Dexie returns new array, this runs often.
+    // To optimize properly we would need a custom hook that diffs the Dexie result.
+    // For now, let's keep it simple as N < 1000 usually.
+    nodes
+  ]);
 
   const prevVisibleIdsRef = useRef<Set<string>>(new Set());
 
@@ -274,11 +291,20 @@ export function MapCanvas({ topicId }: { topicId: string }) {
           })
           .filter((n): n is NodeRecord => n !== null);
 
-        // 5. Commit all changes in one transaction
-        await db.transaction("rw", db.nodes, db.edges, async () => {
-          await db.nodes.bulkPut([...newNodes, ...existingNodesToUpdate]);
-          await db.edges.bulkPut(newEdges);
-        });
+      // 5. Commit all changes in one transaction
+      // We do NOT wait for layout effect here. We commit positions directly.
+      // This prevents "Double Layout" (one from here, one from effect detecting new nodes)
+      // because the new nodes are already in their correct places.
+      // BUT, the effect will still fire because visibleNodes changed.
+      // We need to ensure the effect detects that positions are already stable or 'close enough'.
+      // The current effect logic checks (Math.abs(node.x - p.x) > 1).
+      // Since we just calculated layoutWithD3Tree here and saved it, the effect should see 0 diff and do nothing.
+      // Perfect.
+
+      await db.transaction("rw", db.nodes, db.edges, async () => {
+        await db.nodes.bulkPut([...newNodes, ...existingNodesToUpdate]);
+        await db.edges.bulkPut(newEdges);
+      });
 
 
       } finally {
@@ -351,107 +377,14 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [lastColor, setLastColor] = useState<NodeRecord["colorTag"]>(null);
 
-  // Keyboard Navigation Handler
-  useEffect(() => {
-    if (!selectedNodeId) return;
-
-    const handler = async (event: KeyboardEvent) => {
-      // Allow normal typing if in input fields (though we don't have many here)
-       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
-
-      const currentNode = nodes.find(n => n.id === selectedNodeId);
-      if (!currentNode) return;
-
-      if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        event.stopPropagation();
-
-        const hasChildren = nodes.some(n => n.parentId === currentNode.id);
-
-        // Strategy:
-        // 1. If has children AND is expanded (collapsed=false/undefined) -> Collapse
-        // 2. If has children AND IS collapsed -> Go to parent
-        // 3. If leaf (no children) -> Go to parent
-
-        const isCollapsed = currentNode.collapsed;
-
-        if (hasChildren && !isCollapsed) {
-          // Collapse
-          await db.nodes.update(currentNode.id, { collapsed: true });
-        } else {
-          // Select Parent
-          if (currentNode.parentId) {
-            setSelectedNodeId(currentNode.parentId);
-          }
-        }
-      }
-
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-        event.stopPropagation();
-
-        const children = nodes.filter(n => n.parentId === currentNode.id);
-        const hasChildren = children.length > 0;
-
-        if (currentNode.collapsed) {
-           // Expand
-           await db.nodes.update(currentNode.id, { collapsed: false });
-           // Re-layout? The useMapData hook might not trigger layout automatically on just 'collapsed' generic update if it doesn't change coordinates.
-           // But changing 'collapsed' changes visibleNodes set, which might need layout adjustment if we were dynamically hiding.
-           // However, if we just hide children, the parent stays put.
-           // If we show children, they might need layout.
-           // Let's trigger a layout after expand if needed.
-           // For now, rely on render.
-        } else if (hasChildren) {
-          // Select first child (maybe middle child is better? or top most?)
-          // Usually middle is best for tree navigation, or just first.
-          // Let's sort by Y and pick middle or first.
-          const sortedChildren = children.sort((a,b) => a.y - b.y);
-          // Pick the middle one for intuitive navigation if tree is balanced, or first.
-          // Standard tree behavior: First child or visually closest.
-          const middleIndex = Math.floor(sortedChildren.length / 2);
-          setSelectedNodeId(sortedChildren[middleIndex]?.id || sortedChildren[0].id);
-        }
-      }
-
-      if (event.key === "ArrowUp" || event.key === "ArrowDown") {
-        event.preventDefault();
-        event.stopPropagation();
-
-        // Find siblings
-        const parentId = currentNode.parentId;
-        // Includes self
-        const siblings = nodes
-            .filter(n => n.parentId === parentId)
-            .sort((a,b) => a.y - b.y);
-
-        const currentIndex = siblings.findIndex(n => n.id === currentNode.id);
-
-        if (event.key === "ArrowUp") {
-          if (currentIndex > 0) {
-            setSelectedNodeId(siblings[currentIndex - 1].id);
-          }
-        } else {
-          if (currentIndex < siblings.length - 1) {
-            setSelectedNodeId(siblings[currentIndex + 1].id);
-          }
-        }
-      }
-
-      if (event.key === "Enter") {
-        // Maybe still useful for something? Or just map to Expand?
-         handleExpandNode(selectedNodeId);
-      }
-      if (event.key === "Delete" || event.key === "Backspace") {
-        handleDeleteNode(selectedNodeId);
-      }
-      if (event.key === "Escape") {
-        setSelectedNodeId(null);
-      }
-    };
-    window.addEventListener("keydown", handler, { capture: true });
-    return () => window.removeEventListener("keydown", handler, { capture: true });
-  }, [selectedNodeId, nodes, handleExpandNode, handleDeleteNode]);
+  // Keyboard Navigation
+  useKeyboardNavigation({
+    nodes,
+    selectedNodeId,
+    setSelectedNodeId,
+    onExpandNode: handleExpandNode,
+    onDeleteNode: handleDeleteNode
+  });
 
   const lastCenteredRef = useRef<{ id: string; x: number; y: number } | null>(null);
 
@@ -485,10 +418,11 @@ export function MapCanvas({ topicId }: { topicId: string }) {
           node,
           setSelectedNodeId,
           pendingNodeIds.has(node.id),
-          node.id === selectedNodeId
+          node.id === selectedNodeId,
+          nodes.some((n) => n.parentId === node.id)
         )
       ),
-    [visibleNodes, setSelectedNodeId, pendingNodeIds, selectedNodeId]
+    [visibleNodes, setSelectedNodeId, pendingNodeIds, selectedNodeId, nodes]
   );
 
   const selectedNode = selectedNodeId

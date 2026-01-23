@@ -274,27 +274,27 @@ export function NodeDetailsPanel({
   return (
     <aside
       className={clsx(
-        "pointer-events-auto absolute bottom-0 left-0 right-0 z-30 grid grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-t-sm border-t border-gray-200/80 bg-[#F9F9F7] shadow-[0_-18px_36px_rgba(0,0,0,0.12)]",
-        isFullscreen ? "top-0 h-full rounded-none" : expanded ? "h-[75vh]" : "h-[33vh]"
+        "pointer-events-auto absolute bottom-0 left-0 right-0 z-30 grid grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden border-t border-gray-900 bg-[#F9F9F7]",
+        isFullscreen ? "top-0 h-full" : expanded ? "h-[75vh]" : "h-[33vh]"
       )}
     >
-      <div className="flex items-start justify-between border-b border-gray-200/80 bg-white/80 px-6 py-4 backdrop-blur">
+      <div className="flex items-start justify-between border-b border-gray-200 bg-[#F9F9F7] px-6 py-4">
         <div className="max-w-[70%]">
-          <h3 className="line-clamp-1 font-serif text-2xl font-semibold text-ink" title={node.title}>
+          <h3 className="line-clamp-1 font-serif text-3xl font-bold tracking-tight text-ink" title={node.title}>
             {node.title}
           </h3>
           <p
-            className="mt-2 line-clamp-2 text-sm text-gray-500"
+            className="mt-2 line-clamp-2 text-sm text-gray-600 font-sans"
             title={node.description || "暂无描述"}
           >
             {node.description || "暂无描述"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => setIsFullscreen((prev) => !prev)}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-black hover:text-black"
+            className="flex h-8 w-8 items-center justify-center border border-gray-300 text-gray-500 transition hover:border-black hover:text-black"
             title={isFullscreen ? "退出全屏" : "全屏"}
           >
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -303,8 +303,8 @@ export function NodeDetailsPanel({
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
             className={clsx(
-              "flex h-8 w-8 items-center justify-center rounded-full border text-gray-500 transition hover:border-black hover:text-black",
-              isFullscreen ? "cursor-not-allowed opacity-40" : "border-gray-200"
+              "flex h-8 w-8 items-center justify-center border text-gray-500 transition hover:border-black hover:text-black",
+              isFullscreen ? "cursor-not-allowed opacity-40" : "border-gray-300"
             )}
             disabled={isFullscreen}
             title="展开/收起"
@@ -314,7 +314,7 @@ export function NodeDetailsPanel({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-black hover:text-black"
+            className="flex h-8 w-8 items-center justify-center border border-gray-300 text-gray-500 transition hover:border-black hover:text-black"
             title="关闭"
           >
             <X className="h-4 w-4" />
@@ -327,10 +327,10 @@ export function NodeDetailsPanel({
             ? renderEmptyState()
             : displayMessages.map((message) => {
                 const isUser = message.role === "user";
-                const actionClass = clsx(
-                  "flex h-6 w-6 items-center justify-center rounded-full border text-[10px] transition",
-                  "border-gray-200 text-gray-500 hover:border-black hover:text-black"
-                );
+                  const actionClass = clsx(
+                    "flex h-6 w-6 items-center justify-center border text-[10px] transition",
+                    "border-gray-200 text-gray-500 hover:border-black hover:text-black"
+                  );
                 const nameClass = isUser ? "text-amber-700" : "text-sky-700";
                 const contentClass = isUser ? "text-ink" : "text-gray-700";
 
@@ -394,10 +394,10 @@ export function NodeDetailsPanel({
                 onClick={() => handleSendPrompt(tab.type)}
                 disabled={isLoading}
                 className={clsx(
-                  "rounded-full border px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition",
+                  "border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.1em] transition shadow-[2px_2px_0_rgba(0,0,0,0.1)] hover:shadow-[1px_1px_0_rgba(0,0,0,0.1)] hover:translate-x-[1px] hover:translate-y-[1px] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none",
                   activePrompt === tab.type
-                    ? "border-black text-ink"
-                    : "border-gray-200 text-gray-600 hover:border-black hover:text-ink",
+                    ? "border-black bg-black text-white"
+                    : "border-gray-300 bg-white text-gray-600 hover:border-black hover:text-black",
                   isLoading && "cursor-not-allowed opacity-50"
                 )}
               >

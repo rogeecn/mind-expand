@@ -54,7 +54,7 @@ export function TopicSidebar({
         <div className="flex items-center gap-2">
           <button
             onClick={onCreateTopic}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-ink shadow-sm transition-all hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98]"
+            className="flex flex-1 items-center justify-center gap-2 rounded-sm border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-ink transition-all hover:border-black active:translate-y-px"
           >
             <Plus className="h-4 w-4" />
             <span>New Topic</span>
@@ -62,7 +62,7 @@ export function TopicSidebar({
           <button
             type="button"
             onClick={onOpenManager}
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 shadow-sm transition-all hover:bg-gray-50 hover:border-gray-300 hover:text-ink active:scale-[0.98]"
+            className="flex h-10 w-10 items-center justify-center rounded-sm border border-gray-200 bg-white text-gray-600 transition-all hover:border-black hover:text-ink active:translate-y-px"
             aria-label="Backup manager"
             title="备份管理"
           >
@@ -81,25 +81,19 @@ export function TopicSidebar({
                 type="button"
                 onClick={() => onSelectTopic(topic.id)}
                 className={clsx(
-                  "relative w-full rounded-sm px-3 py-3 text-left transition",
+                  "relative w-full border-b border-transparent px-3 py-4 text-left transition group",
                   topic.id === activeTopicId
-                    ? "bg-gray-50 text-ink"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-ink"
+                    ? "bg-gray-50 text-ink border-gray-200"
+                    : "text-gray-600 hover:text-ink hover:bg-gray-50/50"
                 )}
               >
-                <span
-                  className={clsx(
-                    "absolute left-0 top-3 h-6 w-0.5 rounded",
-                    topic.id === activeTopicId ? "bg-black" : "bg-transparent"
-                  )}
-                />
-                <div className="font-serif text-base font-semibold">
+                <div className={clsx("font-serif text-lg leading-tight transition-colors", topic.id === activeTopicId ? "font-bold text-black" : "font-medium")}>
                   {topic.masterTitle || topic.rootKeyword}
                 </div>
                 <div
                   className={clsx(
-                    "mt-1 line-clamp-2 text-xs",
-                    topic.id === activeTopicId ? "text-gray-500" : "text-gray-400"
+                    "mt-2 line-clamp-2 text-xs leading-relaxed",
+                    topic.id === activeTopicId ? "text-gray-600" : "text-gray-400 group-hover:text-gray-500"
                   )}
                 >
                   {topic.globalConstraints || topic.description || "No description"}
