@@ -4,6 +4,8 @@ import { TopicForm, type TopicFormValues } from "@/components/layout/TopicForm";
 import { TopicSidebar } from "@/components/layout/TopicSidebar";
 import { TopicManagerModal } from "@/components/layout/TopicManagerModal";
 import { MapCanvas } from "@/components/map/MapCanvas";
+import { SettingsModal } from "@/components/map/SettingsModal";
+import { SettingsExportPanel } from "@/components/map/SettingsExportPanel";
 import { expandNodeAction } from "@/app/actions/expand-node";
 import { useTopic } from "@/hooks/useTopic";
 import { calculateChildPositions } from "@/lib/layout";
@@ -28,6 +30,7 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
   const [isReady, setIsReady] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isManagerOpen, setIsManagerOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { topic } = useTopic(activeTopicId);
 
   useEffect(() => {
@@ -173,15 +176,21 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
 
   return (
     <div className="flex h-screen bg-paper text-ink">
-      <TopicSidebar
-        activeTopicId={activeTopicId}
-        onSelectTopic={handleSelectTopic}
-        onCreateTopic={handleCreateTopic}
-        onOpenManager={() => setIsManagerOpen(true)}
-        isOpen={isSidebarOpen}
-        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-      />
-      <TopicManagerModal isOpen={isManagerOpen} onClose={() => setIsManagerOpen(false)} />
+        <TopicSidebar
+          activeTopicId={activeTopicId}
+          onSelectTopic={handleSelectTopic}
+          onCreateTopic={handleCreateTopic}
+          onOpenManager={() => setIsManagerOpen(true)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          isOpen={isSidebarOpen}
+          onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+        />
+        <TopicManagerModal isOpen={isManagerOpen} onClose={() => setIsManagerOpen(false)} />
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          exportView={<SettingsExportPanel />}
+        />
       <main className="relative flex-1 overflow-hidden">
         {!isSidebarOpen && (
           <button

@@ -17,8 +17,6 @@ import { CompactNode } from "@/components/map/CompactNode";
 import { MapToolbar } from "@/components/map/MapToolbar";
 import { NodeDetailsPanel } from "@/components/map/NodeDetailsPanel";
 import { NYTNode } from "@/components/map/NYTNode";
-import { SettingsModal } from "@/components/map/SettingsModal";
-import { SettingsExportPanel } from "@/components/map/SettingsExportPanel";
 import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation";
 import { useMapData } from "@/hooks/useMapData";
 import { useTopic } from "@/hooks/useTopic";
@@ -382,7 +380,6 @@ export function MapCanvas({ topicId }: { topicId: string }) {
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [lastColor, setLastColor] = useState<NodeRecord["colorTag"]>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Keyboard Navigation
   useKeyboardNavigation({
@@ -482,7 +479,6 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         onFitView={onFitView}
         onLayoutTree={onLayoutTree}
         onExport={onExport}
-        onOpenSettings={() => setIsSettingsOpen(true)}
         onSetColor={handleSetColor}
         isColorEnabled={Boolean(selectedNodeId)}
         lastColor={lastColor}
@@ -495,11 +491,6 @@ export function MapCanvas({ topicId }: { topicId: string }) {
           onClose={() => setSelectedNodeId(null)}
         />
       )}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        exportView={<SettingsExportPanel />}
-      />
     </div>
   );
 }

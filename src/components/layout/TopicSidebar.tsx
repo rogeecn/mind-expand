@@ -3,13 +3,14 @@
 import { db } from "@/lib/db";
 import clsx from "clsx";
 import { useLiveQuery } from "dexie-react-hooks";
-import { PanelLeftClose, Plus, Settings, Search } from "lucide-react";
+import { PanelLeftClose, Plus, Settings } from "lucide-react";
 
 type SidebarProps = {
   activeTopicId: string | null;
   onSelectTopic: (topicId: string) => void;
   onCreateTopic: () => void;
   onOpenManager: () => void;
+  onOpenSettings: () => void;
   isOpen: boolean;
   onToggle: () => void;
 };
@@ -19,9 +20,11 @@ export function TopicSidebar({
   onSelectTopic,
   onCreateTopic,
   onOpenManager,
+  onOpenSettings,
   isOpen,
   onToggle
 }: SidebarProps) {
+
   const topics = useLiveQuery(async () => {
     return db.topics.orderBy("updatedAt").reverse().toArray();
   }, []);
@@ -76,10 +79,10 @@ export function TopicSidebar({
           </button>
           <button
             type="button"
-            onClick={onOpenManager}
+            onClick={onOpenSettings}
             className="flex w-12 items-center justify-center border border-gray-200 text-gray-500 transition-all hover:border-ink hover:text-ink active:translate-y-px"
-            aria-label="Backup manager"
-            title="Manage Data"
+            aria-label="Settings"
+            title="Settings"
           >
             <Settings className="h-4 w-4" />
           </button>
