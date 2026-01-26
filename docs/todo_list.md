@@ -37,26 +37,36 @@
   - [x] 上下文注入：root + path + node.title + node.description
   - [x] 消息列表：只追加、不提供清空
 
-- [ ] **Planned: Root Topic Disambiguation & Consolidation**
+- [x] **Planned: Root Topic Disambiguation & Consolidation**
 
 - [x] **Polish: Node Details Panel**
   - [x] 标题限制 1 行
   - [x] 描述限制 2 行 (hover 展示完整)
   - [x] 聊天框支持全屏切换
-  - [ ] 新增 `root-disambiguation` 提示词（多语义拆解）
-  - [ ] 新增 `root-consolidation` 提示词（主旨与全局约束）
-  - [ ] TopicForm 调整为两步流程
-  - [ ] Topic 数据新增 `masterTitle`/`globalConstraints`/`suggestedFocus`
-  - [ ] 下游扩展注入 `globalConstraints`
+  - [x] 新增 `root-disambiguation` 提示词（多语义拆解）
+  - [x] 新增 `root-consolidation` 提示词（主旨与全局约束）
+  - [x] TopicForm 调整为两步流程
+  - [x] Topic 数据新增 `masterTitle`/`globalConstraints`/`suggestedFocus`
+  - [x] 下游扩展注入 `globalConstraints`
 
-- [ ] **Phase 6: Optimization & Polish**
-  - [ ] **Visual Consistency ("Editorial" Aesthetic)**
-    - [ ] Refine `TopicSidebar`: Sharp corners (`rounded-sm`), high contrast borders, `Playfair Display` for list items.
-    - [ ] Refine `NodeDetailsPanel`: Sharp corners, remove excess shadows, match "Newspaper" feel.
-    - [ ] Refine `NYTNode`: Replace "glowing orange" loading with rotating serif asterisk (*).
-  - [ ] **Interaction Simplification**
-    - [ ] `NYTNode`: Visual indicator for "Has Children (Collapsed)" vs "Leaf (Generate AI)".
-    - [ ] Extract Keyboard Navigation to `useKeyboardNavigation` hook.
-  - [ ] **Performance Optimization**
-    - [ ] Optimize `MapCanvas` re-renders (Memoize `visibleNodes` calculation more strictly).
-    - [ ] Decouple Layout: Prevent "Double Layout" (Action vs Effect).
+- [x] **Phase 6: Optimization & Polish**
+  - [x] **Visual Consistency ("Editorial" Aesthetic)**
+    - [x] Refine `TopicSidebar`: Sharp corners (`rounded-sm`), high contrast borders, `Playfair Display` for list items.
+    - [x] Refine `NodeDetailsPanel`: Sharp corners, remove excess shadows, match "Newspaper" feel.
+    - [x] Refine `NYTNode`: Replace "glowing orange" loading with rotating serif asterisk (*).
+  - [x] **Interaction Simplification**
+    - [x] `NYTNode`: Visual indicator for "Has Children (Collapsed)" vs "Leaf (Generate AI)".
+    - [x] Extract Keyboard Navigation to `useKeyboardNavigation` hook.
+  - [x] **Performance Optimization**
+    - [x] Optimize `MapCanvas` re-renders (Memoize `visibleNodes` calculation more strictly).
+    - [x] Decouple Layout: Prevent "Double Layout" (Action vs Effect).
+
+- [ ] **Planned: User Custom Model & Token Settings (Confirmed)**
+  - [ ] Dexie 新增 `settings` 表，存储用户配置（apiToken, modelId）
+  - [ ] 创建 `SettingsModal` 组件（Tabs: 模型设置/导出）
+  - [ ] 模型设置：实现 Model 选择器 + API Token 输入
+  - [ ] 导出功能：导出 JSON 包含 nodes + edges + topics + chatMessages + **settings**
+  - [ ] 导入功能：导入 JSON 时恢复 **settings**
+  - [ ] MapToolbar 添加设置按钮
+  - [ ] expand-node 支持动态模型和 Token
+  - [ ] expand-chat 支持动态模型和 Token
