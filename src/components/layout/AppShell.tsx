@@ -5,7 +5,6 @@ import { TopicSidebar } from "@/components/layout/TopicSidebar";
 import { TopicManagerModal } from "@/components/layout/TopicManagerModal";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { SettingsModal } from "@/components/map/SettingsModal";
-import { SettingsExportPanel } from "@/components/map/SettingsExportPanel";
 import { expandNodeAction } from "@/app/actions/expand-node";
 import { useTopic } from "@/hooks/useTopic";
 import { calculateChildPositions } from "@/lib/layout";
@@ -107,8 +106,7 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
         topicDescription: newTopic.globalConstraints || newTopic.description,
         pathContext: [newTopic.rootKeyword],
         pathDetails: [{ title: newTopic.rootKeyword, description: newTopic.description || "" }],
-        existingChildren: [],
-        count: 6
+        existingChildren: []
       });
 
       const positions = calculateChildPositions(rootNode, [], response.nodes.length);
@@ -189,7 +187,6 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
         <SettingsModal
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
-          exportView={<SettingsExportPanel />}
         />
       <main className="relative flex-1 overflow-hidden">
         {!isSidebarOpen && (

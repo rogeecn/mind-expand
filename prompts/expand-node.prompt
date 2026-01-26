@@ -10,7 +10,6 @@ input:
         description: string
     current_node: string
     existing_children_summary: string
-    count: number
 output:
   schema:
     logic_angle: string
@@ -49,7 +48,6 @@ output:
 {{/each}}
 - **当前操作节点: {{current_node}}**
 - 防御性排他: {{existing_children_summary}}
-- 目标数量: {{count}}
 
 # Execution Guidelines
 1. **血缘校验**：所有生成的节点必须通过校验 —— “[子节点] 是 {{current_node}} 的一部分”。

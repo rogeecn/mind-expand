@@ -13,7 +13,6 @@ const ExpandInputSchema = z.object({
     })
   ),
   existingChildren: z.array(z.string()),
-  count: z.number().min(1).max(10),
   modelConfig: ModelConfigSchema.optional()
 });
 
@@ -27,8 +26,7 @@ const ExpandOutputSchema = z.object({
         depth_thought: z.string()
       })
     )
-    .min(3)
-    .max(10)
+    .min(1)
     .describe("子节点 + 推荐理由 + 深度思考"),
   insight: z.string().describe("一句话推荐理由")
 });
@@ -52,8 +50,7 @@ export async function expandNodeAction(input: z.infer<typeof ExpandInputSchema>)
     path_summary: pathSummary,
     path_details: parsed.pathDetails,
     current_node: currentNode,
-    existing_children_summary: existingChildrenSummary,
-    count: parsed.count
+    existing_children_summary: existingChildrenSummary
   };
   const { ai, modelRefName } = createAI(parsed.modelConfig);
   console.info("[ai:expand-node] request", {
@@ -70,7 +67,6 @@ export async function expandNodeAction(input: z.infer<typeof ExpandInputSchema>)
       path_details: { title: string; description: string }[];
       current_node: string;
       existing_children_summary: string;
-      count: number;
     },
     options: { model: string; output: { schema: typeof ExpandOutputSchema } }
   ) => Promise<{ output: z.infer<typeof ExpandOutputSchema> }>;

@@ -218,82 +218,77 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         .map((item) => item.title)
         .filter((value) => value.length > 0);
 
-      const count = 6;
-      setPendingNodeIds((prev) => new Set(prev).add(nodeId));
+      const response = await expandNodeAction({
+        rootTopic: topic.rootKeyword,
+        topicDescription: topic.globalConstraints || topic.description,
+        pathContext,
+        pathDetails: lineage
+          .slice()
+          .reverse()
+          .map((item) => ({
+            title: item.title,
+            description: item.description || ""
+          }))
+          .filter((item) => item.title.length > 0),
+        existingChildren: existingChildren.map((child) => child.title),
+        modelConfig
+      });
 
-      try {
-        const response = await expandNodeAction({
-          rootTopic: topic.rootKeyword,
-          topicDescription: topic.globalConstraints || topic.description,
-          pathContext,
-          pathDetails: lineage
-            .slice()
-            .reverse()
-            .map((item) => ({
-              title: item.title,
-              description: item.description || ""
-            }))
-            .filter((item) => item.title.length > 0),
-          existingChildren: existingChildren.map((child) => child.title),
-          count,
-          modelConfig
-        });
+      // 1. Create new nodes with temporary positions
+      const newNodes: NodeRecord[] = response.nodes.map((node) => ({
+        id: createId(),
+        topicId: topic.id,
+        parentId: parent.id,
+        title: node.title,
+        description: [node.reason, node.depth_thought].filter(Boolean).join("\n\n"),
+        x: 0,
+        y: 0,
+        nodeStyle: styleConfig.nodeStyle,
+        colorTag: null,
+        collapsed: false,
+        createdAt: Date.now()
+      }));
 
-        // 1. Create new nodes with temporary positions
-        const newNodes: NodeRecord[] = response.nodes.map((node) => ({
-          id: createId(),
-          topicId: topic.id,
-          parentId: parent.id,
-          title: node.title,
-          description: [node.reason, node.depth_thought].filter(Boolean).join("\n\n"),
-          x: 0,
-          y: 0,
-          nodeStyle: styleConfig.nodeStyle,
-          colorTag: null,
-          collapsed: false,
-          createdAt: Date.now()
-        }));
+      const newEdges: EdgeRecord[] = newNodes.map((child) => ({
+        id: createId(),
+        topicId: topic.id,
+        source: parent.id,
+        target: child.id,
+        edgeStyle: styleConfig.edgeStyle,
+        createdAt: Date.now()
+      }));
 
-        const newEdges: EdgeRecord[] = newNodes.map((child) => ({
-          id: createId(),
-          topicId: topic.id,
-          source: parent.id,
-          target: child.id,
-          edgeStyle: styleConfig.edgeStyle,
-          createdAt: Date.now()
-        }));
+      // 2. Calculate global layout immediately with merged data
+      // Only consider currently visible nodes plus the new ones for layout
+      // Changing layout only for the expanded branch is tricky without disrupting others
+      // But layoutWithD3Tree handles full tree. We should layout EVERYTHING or just subtree?
+      // For now, let's keep existing behavior: re-layout everything that is relevant.
+      // Actually, be careful not to layout hidden nodes into weird places.
+      // We will layout visible nodes + new nodes.
+      const allVisibleParams = [...visibleNodes, ...newNodes];
+      const layoutPositions = layoutWithD3Tree(allVisibleParams);
 
-        // 2. Calculate global layout immediately with merged data
-        // Only consider currently visible nodes plus the new ones for layout
-        // Changing layout only for the expanded branch is tricky without disrupting others
-        // But layoutWithD3Tree handles full tree. We should layout EVERYTHING or just subtree?
-        // For now, let's keep existing behavior: re-layout everything that is relevant.
-        // Actually, be careful not to layout hidden nodes into weird places.
-        // We will layout visible nodes + new nodes.
-        const allVisibleParams = [...visibleNodes, ...newNodes];
-        const layoutPositions = layoutWithD3Tree(allVisibleParams);
+      // 3. Apply positions to new nodes
+      const positionMap = new Map(layoutPositions.map((p) => [p.id, p]));
+      newNodes.forEach((node) => {
+        const pos = positionMap.get(node.id);
+        if (pos) {
+          node.x = pos.x;
+          node.y = pos.y;
+        }
+      });
 
-        // 3. Apply positions to new nodes
-        const positionMap = new Map(layoutPositions.map((p) => [p.id, p]));
-        newNodes.forEach((node) => {
-          const pos = positionMap.get(node.id);
-          if (pos) {
-            node.x = pos.x;
-            node.y = pos.y;
+      // 4. Identify existing nodes that moved
+      const existingNodesToUpdate = nodes
+        .filter((n) => positionMap.has(n.id))
+        .map((n) => {
+          const pos = positionMap.get(n.id)!;
+          if (Math.abs(n.x - pos.x) > 0.1 || Math.abs(n.y - pos.y) > 0.1) {
+            return { ...n, x: pos.x, y: pos.y };
           }
-        });
-
-        // 4. Identify existing nodes that moved
-        const existingNodesToUpdate = nodes
-          .filter((n) => positionMap.has(n.id))
-          .map((n) => {
-            const pos = positionMap.get(n.id)!;
-            if (Math.abs(n.x - pos.x) > 0.1 || Math.abs(n.y - pos.y) > 0.1) {
-              return { ...n, x: pos.x, y: pos.y };
-            }
-            return null;
-          })
-          .filter((n): n is NodeRecord => n !== null);
+          return null;
+        })
+        .filter((n): n is NodeRecord => n !== null);
 
       // 5. Commit all changes in one transaction
       // We do NOT wait for layout effect here. We commit positions directly.
@@ -310,17 +305,16 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         await db.edges.bulkPut(newEdges);
       });
 
-
-      } finally {
-        setPendingNodeIds((prev) => {
-          const next = new Set(prev);
-          next.delete(nodeId);
-          return next;
-        });
-      }
-    },
-    [nodes, topic, styleConfig.edgeStyle, styleConfig.nodeStyle, pendingNodeIds, visibleNodes, modelConfig]
-  );
+    } finally {
+      setPendingNodeIds((prev) => {
+        const next = new Set(prev);
+        next.delete(nodeId);
+        return next;
+      });
+    }
+  },
+  [nodes, topic, styleConfig.edgeStyle, styleConfig.nodeStyle, pendingNodeIds, visibleNodes, modelConfig]
+);
 
   const handleDeleteNode = useCallback(
     async (nodeId: string) => {
