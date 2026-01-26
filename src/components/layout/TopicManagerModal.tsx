@@ -50,6 +50,7 @@ export function TopicManagerPanel({ onClose, embedded = false }: TopicManagerPan
   const [mode, setMode] = useState<"export" | "import">("export");
   const [importFile, setImportFile] = useState<BackupFile | null>(null);
   const [candidates, setCandidates] = useState<ImportCandidate[]>([]);
+  const [includeSettings, setIncludeSettings] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,6 +65,7 @@ export function TopicManagerPanel({ onClose, embedded = false }: TopicManagerPan
     setImportFile(null);
     setCandidates([]);
     setMode("export");
+    setIncludeSettings(true);
     setError(null);
   };
 
@@ -97,7 +99,7 @@ export function TopicManagerPanel({ onClose, embedded = false }: TopicManagerPan
         Array.from(selectedIds).map(async (id) => getTopicBackup(id))
       );
       const data = backups.filter((item): item is TopicBackup => Boolean(item));
-      const settings = await getSettingsBackup();
+      const settings = includeSettings ? await getSettingsBackup() : undefined;
       const payload: BackupFile = {
         version: 2,
         timestamp: Date.now(),
@@ -268,6 +270,15 @@ export function TopicManagerPanel({ onClose, embedded = false }: TopicManagerPan
           >
             {allSelected ? "清空" : "全选"}
           </button>
+          <label className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-gray-500">
+            <input
+              type="checkbox"
+              className="h-4 w-4 border-gray-300 text-black focus:ring-black"
+              checked={includeSettings}
+              onChange={(event) => setIncludeSettings(event.target.checked)}
+            />
+            导出模型配置
+          </label>
           <button
             type="button"
             onClick={handleExport}
