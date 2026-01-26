@@ -73,6 +73,13 @@ export type SettingsRecord = {
   modelId?: string;
   baseURL?: string;
   modelCatalog?: ModelCatalogItem[];
+  modelPresets?: Array<{
+    id: string;
+    modelId: string;
+    note?: string;
+    apiToken?: string;
+    baseURL?: string;
+  }>;
 };
 
 class MindMapDatabase extends Dexie {

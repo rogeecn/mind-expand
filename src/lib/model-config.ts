@@ -35,28 +35,19 @@ const parseModelCatalog = (raw?: string) => {
   }
 };
 
-const buildFallbackCatalog = (modelId: string): ModelCatalogItem[] => [
-  {
-    id: modelId,
-    label: modelId,
-    provider: "openai",
-    model: modelId
-  }
-];
 
 export const resolveModelConfig = (config?: ModelConfigInput) => {
-  const defaultModelId = process.env.MODEL_DEFAULT_ID ?? "gpt-4o-mini";
   const envCatalog = parseModelCatalog(process.env.MODEL_CATALOG);
+  const modelId = config?.modelId?.trim() || "";
   const modelCatalog = config?.modelCatalog?.length
     ? config.modelCatalog
     : envCatalog.length
       ? envCatalog
-      : buildFallbackCatalog(defaultModelId);
-  const modelId = config?.modelId ?? defaultModelId;
-  const matched = modelCatalog.find((item) => item.id === modelId);
+      : [];
+  const matched = modelCatalog.find((item: ModelCatalogItem) => item.id === modelId);
   const modelName = matched?.model ?? modelId;
   const apiKey = config?.apiToken ?? process.env.OPENAI_API_KEY;
-  const baseURL = config?.baseURL ?? process.env.OPENAI_BASE_URL;
+  const baseURL = config?.baseURL || process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
 
   return {
     modelCatalog,

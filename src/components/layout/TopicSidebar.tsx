@@ -3,7 +3,7 @@
 import { db } from "@/lib/db";
 import clsx from "clsx";
 import { useLiveQuery } from "dexie-react-hooks";
-import { PanelLeftClose, Plus, Settings } from "lucide-react";
+import { PanelLeftClose, Plus, Settings, Archive } from "lucide-react";
 
 type SidebarProps = {
   activeTopicId: string | null;
@@ -69,7 +69,7 @@ export function TopicSidebar({
 
       {/* Primary Actions */}
       <div className="px-6 pb-6 min-w-[320px]">
-        <div className="flex items-stretch gap-3">
+        <div className="flex items-stretch gap-2">
           <button
             onClick={onCreateTopic}
             className="flex flex-1 items-center justify-center gap-2 bg-ink text-white px-4 py-3 text-xs font-bold uppercase tracking-widest shadow-sm transition-all hover:bg-black hover:shadow-md active:translate-y-px"
@@ -85,6 +85,15 @@ export function TopicSidebar({
             title="Settings"
           >
             <Settings className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onOpenManager}
+            className="flex w-12 items-center justify-center border border-gray-200 text-gray-500 transition-all hover:border-ink hover:text-ink active:translate-y-px"
+            aria-label="Backup manager"
+            title="Manage Data"
+          >
+            <Archive className="h-4 w-4" />
           </button>
         </div>
       </div>

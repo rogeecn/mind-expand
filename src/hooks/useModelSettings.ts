@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type SettingsRecord } from "@/lib/db";
-import { getModelDefaultsAction } from "@/app/actions/model-config";
 import type { ModelCatalogItem, ModelConfigInput } from "@/lib/model-config";
 
 const SETTINGS_ID = "user-settings";
@@ -15,6 +14,7 @@ export type ModelSettingsState = {
   apiToken: string;
   modelId: string;
   modelCatalogOverride: ModelCatalogItem[];
+  modelPresets: NonNullable<SettingsRecord["modelPresets"]>;
 };
 
 export const useModelSettings = () => {
@@ -22,44 +22,19 @@ export const useModelSettings = () => {
     return db.settings.get(SETTINGS_ID);
   }, []);
 
-  const [defaults, setDefaults] = useState<{
-    modelCatalog: ModelCatalogItem[];
-    modelDefaultId: string;
-    baseURL: string;
-  } | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-    setIsLoading(true);
-    getModelDefaultsAction()
-      .then((response) => {
-        if (isMounted) {
-          setDefaults(response);
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
   const modelCatalog = settingsRecord?.modelCatalog?.length
     ? settingsRecord.modelCatalog
-    : defaults?.modelCatalog ?? [];
-  const modelId = settingsRecord?.modelId ?? defaults?.modelDefaultId ?? "";
+    : [];
+  const modelId = settingsRecord?.modelId ?? "";
 
   const state: ModelSettingsState = {
     modelCatalog,
-    modelDefaultId: defaults?.modelDefaultId ?? "",
-    baseURL: settingsRecord?.baseURL ?? defaults?.baseURL ?? "",
+    modelDefaultId: "",
+    baseURL: settingsRecord?.baseURL ?? "",
     apiToken: settingsRecord?.apiToken ?? "",
     modelId,
-    modelCatalogOverride: settingsRecord?.modelCatalog ?? []
+    modelCatalogOverride: settingsRecord?.modelCatalog ?? [],
+    modelPresets: settingsRecord?.modelPresets ?? []
   };
 
   const modelConfig = useMemo<ModelConfigInput>(() => ({
@@ -76,10 +51,11 @@ export const useModelSettings = () => {
 
   const saveSettings = useCallback(async (next: Partial<SettingsRecord>) => {
     await db.settings.put({
-      id: SETTINGS_ID,
-      ...next
+      ...(settingsRecord ?? { id: SETTINGS_ID }),
+      ...next,
+      id: SETTINGS_ID
     });
-  }, []);
+  }, [settingsRecord]);
 
   const resetSettings = useCallback(async () => {
     await db.settings.delete(SETTINGS_ID);
@@ -87,8 +63,6 @@ export const useModelSettings = () => {
 
   return {
     state,
-    defaults,
-    isLoading,
     modelConfig,
     saveSettings,
     resetSettings
