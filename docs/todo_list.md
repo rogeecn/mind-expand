@@ -62,11 +62,12 @@
     - [x] Decouple Layout: Prevent "Double Layout" (Action vs Effect).
 
 - [ ] **Planned: User Custom Model & Token Settings (Confirmed)**
-  - [ ] Dexie 新增 `settings` 表，存储用户配置（apiToken, modelId）
+  - [ ] 对齐环境变量：MODEL_CATALOG, MODEL_DEFAULT_ID, OPENAI_API_KEY, OPENAI_BASE_URL
+  - [ ] Dexie 新增 `settings` 表，存储用户配置（apiToken, modelId, baseURL, modelCatalog）
   - [ ] 创建 `SettingsModal` 组件（Tabs: 模型设置/导出）
-  - [ ] 模型设置：实现 Model 选择器 + API Token 输入
+  - [ ] 模型设置：实现 Model 选择器 + API Token + BaseURL 输入
   - [ ] 导出功能：导出 JSON 包含 nodes + edges + topics + chatMessages + **settings**
   - [ ] 导入功能：导入 JSON 时恢复 **settings**
   - [ ] MapToolbar 添加设置按钮
-  - [ ] expand-node 支持动态模型和 Token
+  - [ ] expand-node 支持动态模型和 Token（用户配置 > 环境变量 > 默认值）
   - [ ] expand-chat 支持动态模型和 Token
