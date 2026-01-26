@@ -1,11 +1,11 @@
 "use server";
 
-import openAI from "@genkit-ai/compat-oai";
-import { genkit } from "genkit";
 import { z } from "zod";
+import { createAI, ModelConfigSchema } from "@/lib/model-config";
 
 const DisambiguationInputSchema = z.object({
-  root_keyword: z.string()
+  root_keyword: z.string(),
+  modelConfig: ModelConfigSchema.optional()
 });
 
 const DisambiguationOutputSchema = z.object({
@@ -20,7 +20,8 @@ const DisambiguationOutputSchema = z.object({
 
 const ConsolidationInputSchema = z.object({
   root_keyword: z.string(),
-  selected_contexts: z.array(z.string())
+  selected_contexts: z.array(z.string()),
+  modelConfig: ModelConfigSchema.optional()
 });
 
 const ConsolidationOutputSchema = z.object({
@@ -30,20 +31,6 @@ const ConsolidationOutputSchema = z.object({
   suggested_focus: z.array(z.string())
 });
 
-const pluginName = "mind-expand";
-const defaultModelName = process.env.MODEL_DEFAULT_ID ?? "gpt-4o-mini";
-const modelRefName = `${pluginName}/${defaultModelName}`;
-
-const ai = genkit({
-  promptDir: "./prompts",
-  plugins: [
-    openAI({
-      name: pluginName,
-      apiKey: process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENAI_BASE_URL
-    })
-  ]
-});
 
 type RootDisambiguationResult = z.infer<typeof DisambiguationOutputSchema>;
 
@@ -51,6 +38,7 @@ type RootConsolidationResult = z.infer<typeof ConsolidationOutputSchema>;
 
 export async function rootDisambiguationAction(input: z.infer<typeof DisambiguationInputSchema>) {
   const parsed = DisambiguationInputSchema.parse(input);
+  const { ai, modelRefName } = createAI(parsed.modelConfig);
   const prompt = ai.prompt("root-disambiguation") as (
     payload: { root_keyword: string },
     options: { model: string; output: { schema: typeof DisambiguationOutputSchema } }
@@ -75,6 +63,7 @@ export async function rootDisambiguationAction(input: z.infer<typeof Disambiguat
 
 export async function rootConsolidationAction(input: z.infer<typeof ConsolidationInputSchema>) {
   const parsed = ConsolidationInputSchema.parse(input);
+  const { ai, modelRefName } = createAI(parsed.modelConfig);
   const prompt = ai.prompt("root-consolidation") as (
     payload: { root_keyword: string; selected_contexts: string[] },
     options: { model: string; output: { schema: typeof ConsolidationOutputSchema } }

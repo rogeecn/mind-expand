@@ -2,7 +2,13 @@
 
 import Dexie from "dexie";
 import { db } from "@/lib/db";
-import type { ChatMessageRecord, EdgeRecord, NodeRecord, TopicRecord } from "@/lib/db";
+import type {
+  ChatMessageRecord,
+  EdgeRecord,
+  NodeRecord,
+  SettingsRecord,
+  TopicRecord
+} from "@/lib/db";
 
 export type ExportPayload = {
   topic: TopicRecord;
@@ -18,9 +24,10 @@ export type TopicBackup = {
 };
 
 export type BackupFile = {
-  version: 1;
+  version: 1 | 2;
   timestamp: number;
   data: TopicBackup[];
+  settings?: SettingsRecord;
 };
 
 export function downloadExport(payload: ExportPayload) {
@@ -55,7 +62,7 @@ export async function importExportFile(file: File) {
 export function isBackupFile(payload: unknown): payload is BackupFile {
   if (!payload || typeof payload !== "object") return false;
   const candidate = payload as BackupFile;
-  if (candidate.version !== 1) return false;
+  if (candidate.version !== 2 && candidate.version !== 1) return false;
   if (!Array.isArray(candidate.data)) return false;
   return typeof candidate.timestamp === "number";
 }
@@ -74,4 +81,8 @@ export async function getTopicBackup(topicId: string): Promise<TopicBackup | nul
   ]);
 
   return { topic, nodes, edges, chats };
+}
+
+export async function getSettingsBackup() {
+  return db.settings.get("user-settings");
 }

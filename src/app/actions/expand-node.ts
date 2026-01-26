@@ -1,10 +1,7 @@
 "use server";
 
-import openAI from "@genkit-ai/compat-oai";
-import { genkit } from "genkit";
 import { z } from "zod";
-
-
+import { createAI, ModelConfigSchema } from "@/lib/model-config";
 const ExpandInputSchema = z.object({
   rootTopic: z.string(),
   topicDescription: z.string(),
@@ -16,7 +13,8 @@ const ExpandInputSchema = z.object({
     })
   ),
   existingChildren: z.array(z.string()),
-  count: z.number().min(1).max(10)
+  count: z.number().min(1).max(10),
+  modelConfig: ModelConfigSchema.optional()
 });
 
 const ExpandOutputSchema = z.object({
@@ -35,20 +33,6 @@ const ExpandOutputSchema = z.object({
   insight: z.string().describe("一句话推荐理由")
 });
 
-const defaultModelName = process.env.MODEL_DEFAULT_ID ?? "gpt-4o-mini";
-const pluginName = "mind-expand";
-const modelRefName = `${pluginName}/${defaultModelName}`;
-
-const ai = genkit({
-  promptDir: "./prompts",
-  plugins: [
-    openAI({
-      name: pluginName,
-      apiKey: process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENAI_BASE_URL
-    })
-  ]
-});
 
 
 
@@ -71,6 +55,7 @@ export async function expandNodeAction(input: z.infer<typeof ExpandInputSchema>)
     existing_children_summary: existingChildrenSummary,
     count: parsed.count
   };
+  const { ai, modelRefName } = createAI(parsed.modelConfig);
   console.info("[ai:expand-node] request", {
     model: modelRefName,
     prompt: "expand-node",

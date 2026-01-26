@@ -1,8 +1,7 @@
 "use server";
 
-import openAI from "@genkit-ai/compat-oai";
-import { genkit } from "genkit";
 import { z } from "zod";
+import { createAI, ModelConfigSchema } from "@/lib/model-config";
 
 const StrategySchema = z.enum([
   "structural",
@@ -31,16 +30,19 @@ const ExpandChatInputSchema = z.discriminatedUnion("mode", [
     current_node: z.string(),
     strategy: StrategySchema,
     intensity: z.number().min(1).max(5),
-    history: ChatHistorySchema.optional()
+    history: ChatHistorySchema.optional(),
+    modelConfig: ModelConfigSchema.optional()
   }),
   z.object({
     mode: z.literal("intent"),
     full_path: z.string(),
     current_node: z.string(),
     intensity: z.number().min(1).max(5),
-    history: ChatHistorySchema.optional()
+    history: ChatHistorySchema.optional(),
+    modelConfig: ModelConfigSchema.optional()
   })
 ]);
+
 
 const ExpandChatOutputSchema = z.object({
   strategy_name: z.string(),
@@ -51,20 +53,6 @@ const ExpandChatOutputSchema = z.object({
   context_note: z.string().optional()
 });
 
-const defaultModelName = process.env.MODEL_DEFAULT_ID ?? "gpt-4o-mini";
-const pluginName = "mind-expand";
-const modelRefName = `${pluginName}/${defaultModelName}`;
-
-const ai = genkit({
-  promptDir: "./prompts",
-  plugins: [
-    openAI({
-      name: pluginName,
-      apiKey: process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENAI_BASE_URL
-    })
-  ]
-});
 
 const strategyNameMap: Record<z.infer<typeof StrategySchema>, string> = {
   structural: "直接拆分",
@@ -81,6 +69,7 @@ const strategyNameMap: Record<z.infer<typeof StrategySchema>, string> = {
 
 export async function expandChatAction(input: z.infer<typeof ExpandChatInputSchema>) {
   const parsed = ExpandChatInputSchema.parse(input);
+  const { ai, modelRefName } = createAI(parsed.modelConfig);
   if (parsed.mode === "strategy") {
     const prompt = ai.prompt("deep-analysis") as (
       payload: {

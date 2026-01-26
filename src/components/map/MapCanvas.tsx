@@ -17,6 +17,8 @@ import { CompactNode } from "@/components/map/CompactNode";
 import { MapToolbar } from "@/components/map/MapToolbar";
 import { NodeDetailsPanel } from "@/components/map/NodeDetailsPanel";
 import { NYTNode } from "@/components/map/NYTNode";
+import { SettingsModal } from "@/components/map/SettingsModal";
+import { SettingsExportPanel } from "@/components/map/SettingsExportPanel";
 import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation";
 import { useMapData } from "@/hooks/useMapData";
 import { useTopic } from "@/hooks/useTopic";
@@ -26,6 +28,7 @@ import { layoutWithD3Tree } from "@/lib/layout";
 import { expandNodeAction } from "@/app/actions/expand-node";
 import { downloadExport } from "@/components/map/ImportExport";
 import { createId } from "@/lib/uuid";
+import { useModelSettings } from "@/hooks/useModelSettings";
 
 const nodeTypes: NodeTypes = {
   nyt: NYTNode,
@@ -74,6 +77,7 @@ function mapEdgeToFlow(edge: EdgeRecord) {
 export function MapCanvas({ topicId }: { topicId: string }) {
   const { topic } = useTopic(topicId);
   const { nodes, edges, updateNodePosition, updateNodePositions } = useMapData(topicId);
+  const { modelConfig } = useModelSettings();
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [pendingNodeIds, setPendingNodeIds] = useState<Set<string>>(new Set());
 
@@ -175,6 +179,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   };
 
 
+
   const onLayoutTree = useCallback(async () => {
     const layout = layoutWithD3Tree(visibleNodes); // Only layout visible nodes!
     if (layout.length === 0) return;
@@ -232,7 +237,8 @@ export function MapCanvas({ topicId }: { topicId: string }) {
             }))
             .filter((item) => item.title.length > 0),
           existingChildren: existingChildren.map((child) => child.title),
-          count
+          count,
+          modelConfig
         });
 
         // 1. Create new nodes with temporary positions
@@ -315,7 +321,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         });
       }
     },
-    [nodes, topic, styleConfig.edgeStyle, styleConfig.nodeStyle, pendingNodeIds, visibleNodes]
+    [nodes, topic, styleConfig.edgeStyle, styleConfig.nodeStyle, pendingNodeIds, visibleNodes, modelConfig]
   );
 
   const handleDeleteNode = useCallback(
@@ -376,6 +382,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [lastColor, setLastColor] = useState<NodeRecord["colorTag"]>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Keyboard Navigation
   useKeyboardNavigation({
@@ -475,6 +482,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         onFitView={onFitView}
         onLayoutTree={onLayoutTree}
         onExport={onExport}
+        onOpenSettings={() => setIsSettingsOpen(true)}
         onSetColor={handleSetColor}
         isColorEnabled={Boolean(selectedNodeId)}
         lastColor={lastColor}
@@ -487,6 +495,11 @@ export function MapCanvas({ topicId }: { topicId: string }) {
           onClose={() => setSelectedNodeId(null)}
         />
       )}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        exportView={<SettingsExportPanel />}
+      />
     </div>
   );
 }

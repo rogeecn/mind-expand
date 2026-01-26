@@ -2,12 +2,13 @@
 
 import { useRef, useState } from "react";
 import clsx from "clsx";
-import { ChevronDown, Focus, TreePine, HelpCircle, X } from "lucide-react";
+import { ChevronDown, Focus, TreePine, HelpCircle, X, SlidersHorizontal } from "lucide-react";
 
 type ToolbarProps = {
   onFitView: () => void;
   onExport: () => void;
   onLayoutTree: () => void;
+  onOpenSettings: () => void;
   onSetColor: (color: "ink" | "amber" | "sky" | "mint" | null) => void;
   isColorEnabled: boolean;
   lastColor: "ink" | "amber" | "sky" | "mint" | null;
@@ -29,6 +30,7 @@ export function MapToolbar({
   onFitView,
   onExport,
   onLayoutTree,
+  onOpenSettings,
   onSetColor,
   isColorEnabled,
   lastColor
@@ -113,6 +115,10 @@ export function MapToolbar({
             </div>
           )}
         </div>
+        <button className={buttonBase} type="button" onClick={onOpenSettings} aria-label="Settings">
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          设置
+        </button>
         <button className={buttonBase} type="button" onClick={() => setIsHelpOpen(true)} aria-label="Usage">
           <HelpCircle className="h-3.5 w-3.5" />
           说明

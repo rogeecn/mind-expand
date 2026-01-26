@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { Modal } from "@/components/common/Modal";
 import {
   downloadBackup,
+  getSettingsBackup,
   getTopicBackup,
   importExportFile,
   isBackupFile,
@@ -29,13 +30,18 @@ type TopicManagerModalProps = {
   onClose: () => void;
 };
 
+type TopicManagerPanelProps = {
+  onClose: () => void;
+  embedded?: boolean;
+};
+
 const actionLabels: Record<ImportAction, string> = {
   import: "导入",
   overwrite: "覆盖",
   skip: "跳过"
 };
 
-export function TopicManagerModal({ isOpen, onClose }: TopicManagerModalProps) {
+export function TopicManagerPanel({ onClose, embedded = false }: TopicManagerPanelProps) {
   const topics = useLiveQuery(async () => {
     return db.topics.orderBy("updatedAt").reverse().toArray();
   }, []);
@@ -91,16 +97,19 @@ export function TopicManagerModal({ isOpen, onClose }: TopicManagerModalProps) {
         Array.from(selectedIds).map(async (id) => getTopicBackup(id))
       );
       const data = backups.filter((item): item is TopicBackup => Boolean(item));
+      const settings = await getSettingsBackup();
       const payload: BackupFile = {
-        version: 1,
+        version: 2,
         timestamp: Date.now(),
-        data
+        data,
+        settings: settings ?? undefined
       };
       downloadBackup(payload);
     } finally {
       setIsBusy(false);
     }
   };
+
 
   const handleImportClick = () => {
     const input = document.createElement("input");
@@ -148,45 +157,52 @@ export function TopicManagerModal({ isOpen, onClose }: TopicManagerModalProps) {
     if (!importFile || candidates.length === 0) return;
     setIsBusy(true);
     try {
-      await db.transaction("rw", db.topics, db.nodes, db.edges, db.chatMessages, async () => {
-        for (const candidate of candidates) {
-          if (candidate.action === "skip") continue;
+        await db.transaction("rw", db.tables, async () => {
+          for (const candidate of candidates) {
+            if (candidate.action === "skip") continue;
 
-          const { topic, nodes, edges, chats } = candidate.backup;
-          if (candidate.action === "overwrite") {
-            await db.topics.delete(topic.id);
-            const nodeIds = await db.nodes.where("topicId").equals(topic.id).primaryKeys();
-            if (nodeIds.length) {
-              await db.nodes.bulkDelete(nodeIds as string[]);
+            const { topic, nodes, edges, chats } = candidate.backup;
+            if (candidate.action === "overwrite") {
+              await db.topics.delete(topic.id);
+              const nodeIds = await db.nodes.where("topicId").equals(topic.id).primaryKeys();
+              if (nodeIds.length) {
+                await db.nodes.bulkDelete(nodeIds as string[]);
+              }
+              const edgeIds = await db.edges.where("topicId").equals(topic.id).primaryKeys();
+              if (edgeIds.length) {
+                await db.edges.bulkDelete(edgeIds as string[]);
+              }
+              const chatIds = await db.chatMessages
+                .where("[topicId+nodeId]")
+                .between([topic.id, Dexie.minKey], [topic.id, Dexie.maxKey])
+                .primaryKeys();
+              if (chatIds.length) {
+                await db.chatMessages.bulkDelete(chatIds as string[]);
+              }
             }
-            const edgeIds = await db.edges.where("topicId").equals(topic.id).primaryKeys();
-            if (edgeIds.length) {
-              await db.edges.bulkDelete(edgeIds as string[]);
+
+            await db.topics.put({
+              ...topic,
+              updatedAt: Date.now()
+            });
+            if (nodes.length) {
+              await db.nodes.bulkPut(nodes);
             }
-            const chatIds = await db.chatMessages
-              .where("[topicId+nodeId]")
-              .between([topic.id, Dexie.minKey], [topic.id, Dexie.maxKey])
-              .primaryKeys();
-            if (chatIds.length) {
-              await db.chatMessages.bulkDelete(chatIds as string[]);
+            if (edges.length) {
+              await db.edges.bulkPut(edges);
+            }
+            if (chats.length) {
+              await db.chatMessages.bulkPut(chats);
             }
           }
 
-          await db.topics.put({
-            ...topic,
-            updatedAt: Date.now()
-          });
-          if (nodes.length) {
-            await db.nodes.bulkPut(nodes);
+          if (importFile.settings) {
+            await db.settings.put({
+              ...importFile.settings,
+              id: "user-settings"
+            });
           }
-          if (edges.length) {
-            await db.edges.bulkPut(edges);
-          }
-          if (chats.length) {
-            await db.chatMessages.bulkPut(chats);
-          }
-        }
-      });
+        });
 
       setSelectedIds(new Set());
       resetImportState();
@@ -200,6 +216,10 @@ export function TopicManagerModal({ isOpen, onClose }: TopicManagerModalProps) {
     resetImportState();
     onClose();
   };
+
+  if (!topics) {
+    return <div className="py-8 text-sm text-gray-500">加载中...</div>;
+  }
 
   const renderExportList = () => (
     <div>
@@ -230,14 +250,16 @@ export function TopicManagerModal({ isOpen, onClose }: TopicManagerModalProps) {
       </div>
       {error && <div className="mt-4 text-sm text-red-600">{error}</div>}
       <div className="mt-6 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={handleImportClick}
-          className="inline-flex items-center gap-2 rounded-sm border border-gray-300 px-4 py-2 text-xs font-medium uppercase tracking-[0.2em] text-gray-600 transition hover:border-black hover:text-black"
-        >
-          <UploadCloud className="h-4 w-4" />
-          导入备份
-        </button>
+        {!embedded && (
+          <button
+            type="button"
+            onClick={handleImportClick}
+            className="inline-flex items-center gap-2 rounded-sm border border-gray-300 px-4 py-2 text-xs font-medium uppercase tracking-[0.2em] text-gray-600 transition hover:border-black hover:text-black"
+          >
+            <UploadCloud className="h-4 w-4" />
+            导入备份
+          </button>
+        )}
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -350,9 +372,18 @@ export function TopicManagerModal({ isOpen, onClose }: TopicManagerModalProps) {
     </div>
   );
 
+  if (embedded) {
+    return renderExportList();
+  }
+
+  return mode === "export" ? renderExportList() : renderImportList();
+}
+
+export function TopicManagerModal({ isOpen, onClose }: TopicManagerModalProps) {
+  if (!isOpen) return null;
   return (
-    <Modal title="备份管理" isOpen={isOpen} onClose={handleClose} maxWidth="max-w-4xl">
-      {mode === "export" ? renderExportList() : renderImportList()}
+    <Modal title="备份管理" isOpen={isOpen} onClose={onClose} maxWidth="max-w-4xl">
+      <TopicManagerPanel onClose={onClose} />
     </Modal>
   );
 }

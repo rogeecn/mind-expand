@@ -60,11 +60,27 @@ export type ChatMessageRecord = {
   createdAt: number;
 };
 
+export type ModelCatalogItem = {
+  id: string;
+  label: string;
+  provider: string;
+  model: string;
+};
+
+export type SettingsRecord = {
+  id: string;
+  apiToken?: string;
+  modelId?: string;
+  baseURL?: string;
+  modelCatalog?: ModelCatalogItem[];
+};
+
 class MindMapDatabase extends Dexie {
   topics!: Table<TopicRecord, string>;
   nodes!: Table<NodeRecord, string>;
   edges!: Table<EdgeRecord, string>;
   chatMessages!: Table<ChatMessageRecord, string>;
+  settings!: Table<SettingsRecord, string>;
 
   constructor() {
     super("MindExpandDB");
@@ -122,6 +138,14 @@ class MindMapDatabase extends Dexie {
       nodes: "id, topicId, parentId",
       edges: "id, topicId, source",
       chatMessages: "id, [topicId+nodeId], createdAt"
+    });
+
+    this.version(7).stores({
+      topics: "id, rootKeyword, updatedAt",
+      nodes: "id, topicId, parentId",
+      edges: "id, topicId, source",
+      chatMessages: "id, [topicId+nodeId], createdAt",
+      settings: "id"
     });
   }
 }

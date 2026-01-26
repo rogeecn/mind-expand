@@ -1,8 +1,7 @@
 "use server";
 
-import openAI from "@genkit-ai/compat-oai";
-import { genkit } from "genkit";
 import { z } from "zod";
+import { createAI, ModelConfigSchema } from "@/lib/model-config";
 
 const PromptTypeSchema = z.enum(["direct", "cause", "counter", "timeline", "analogy"]);
 
@@ -12,7 +11,8 @@ const ExpandConceptInputSchema = z.object({
   pathContext: z.array(z.string()),
   nodeTitle: z.string(),
   nodeDescription: z.string(),
-  promptType: PromptTypeSchema
+  promptType: PromptTypeSchema,
+  modelConfig: ModelConfigSchema.optional()
 });
 
 const ExpandConceptOutputSchema = z.object({
@@ -21,20 +21,6 @@ const ExpandConceptOutputSchema = z.object({
   insight: z.string()
 });
 
-const defaultModelName = process.env.MODEL_DEFAULT_ID ?? "gpt-4o-mini";
-const pluginName = "mind-expand";
-const modelRefName = `${pluginName}/${defaultModelName}`;
-
-const ai = genkit({
-  promptDir: "./prompts",
-  plugins: [
-    openAI({
-      name: pluginName,
-      apiKey: process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENAI_BASE_URL
-    })
-  ]
-});
 
 const promptLabelMap: Record<z.infer<typeof PromptTypeSchema>, string> = {
   direct: "直接拆分",
@@ -69,6 +55,7 @@ const promptGuidanceMap: Record<z.infer<typeof PromptTypeSchema>, string[]> = {
 
 export async function expandConceptAction(input: z.infer<typeof ExpandConceptInputSchema>) {
   const parsed = ExpandConceptInputSchema.parse(input);
+  const { ai, modelRefName } = createAI(parsed.modelConfig);
   const prompt = ai.prompt("expand-concept") as (
     input: {
       rootTopic: string;

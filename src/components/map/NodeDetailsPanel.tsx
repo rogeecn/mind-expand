@@ -9,6 +9,7 @@ import { Markdown } from "@/components/common/Markdown";
 import { db, type ChatMessageRecord, type NodeRecord } from "@/lib/db";
 import { expandChatAction } from "@/app/actions/expand-chat";
 import { createId } from "@/lib/uuid";
+import { useModelSettings } from "@/hooks/useModelSettings";
 
 // ... StrategyType and PROMPT_TABS definitions remain the same ...
 type StrategyType =
@@ -93,6 +94,7 @@ export function NodeDetailsPanel({
 }: NodeDetailsPanelProps) {
   // Mode: 'summary' (default, compact) | 'chat' (expanded, interactive)
   const [viewMode, setViewMode] = useState<"summary" | "chat">("summary");
+  const { modelConfig } = useModelSettings();
   const [expanded, setExpanded] = useState(false); // Controls height in Chat mode
   const [activePrompt, setActivePrompt] = useState<StrategyType | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -212,7 +214,8 @@ export function NodeDetailsPanel({
       current_node: currentNode,
       strategy: payload.strategy,
       intensity: payload.intensity,
-      history
+      history,
+      modelConfig
     });
     const assistantMessage = createChatMessage({
       topicId: node.topicId,

@@ -7,6 +7,7 @@ import {
 import { AutoTextarea } from "@/components/common/AutoTextarea";
 import clsx from "clsx";
 import { useState } from "react";
+import { useModelSettings } from "@/hooks/useModelSettings";
 
 export type TopicFormValues = {
   rootKeyword: string;
@@ -36,12 +37,16 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
   const [selectedSenses, setSelectedSenses] = useState<string[]>([]);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const { modelConfig } = useModelSettings();
 
   const handleAnalyze = async () => {
     if (!rootKeyword.trim()) return;
     setIsAnalyzing(true);
     try {
-      const result = await rootDisambiguationAction({ root_keyword: rootKeyword.trim() });
+      const result = await rootDisambiguationAction({
+        root_keyword: rootKeyword.trim(),
+        modelConfig
+      });
       const options = result.potential_contexts.map((item) => item.context_name);
       const descriptionMap = result.potential_contexts.reduce<Record<string, string>>((acc, item) => {
         acc[item.context_name] = item.description;
@@ -71,7 +76,8 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
     try {
       const result = await rootConsolidationAction({
         root_keyword: rootKeyword.trim(),
-        selected_contexts: selectedSenses
+        selected_contexts: selectedSenses,
+        modelConfig
       });
       setDescription(result.master_description ?? "");
       setMasterTitle(result.master_title);
