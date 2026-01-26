@@ -189,34 +189,36 @@ export function MapCanvas({ topicId }: { topicId: string }) {
       if (pendingNodeIds.has(nodeId)) return;
       const parent = nodes.find((item) => item.id === nodeId);
       if (!parent || !topic) return;
+      setPendingNodeIds((prev) => new Set(prev).add(nodeId));
+      try {
+        const existingChildren = nodes.filter((item) => item.parentId === parent.id);
 
-      const existingChildren = nodes.filter((item) => item.parentId === parent.id);
+        // If we already have children, this is just a UI expand (un-collapse)
+        // BUT existing logic creates NEW nodes via AI.
+        // The user distinction: Right Arrow = "Expand" (UI) or "Generate" (AI)?
+        // If expanding a node that has existing children but is collapsed, we should just set collapsed=false.
+        // If it is NOT collapsed and has NO children, maybe generate?
 
-      // If we already have children, this is just a UI expand (un-collapse)
-      // BUT existing logic creates NEW nodes via AI.
-      // The user distinction: Right Arrow = "Expand" (UI) or "Generate" (AI)?
-      // If expanding a node that has existing children but is collapsed, we should just set collapsed=false.
-      // If it is NOT collapsed and has NO children, maybe generate?
+        if (parent.collapsed) {
+          await db.nodes.update(parent.id, { collapsed: false });
+          return;
+        }
 
-      if (parent.collapsed) {
-        await db.nodes.update(parent.id, { collapsed: false });
-        return;
-      }
+        // Removed check for existing children to allow appending logic via Enter key
+        // if (existingChildren.length > 0) return;
 
-      // Removed check for existing children to allow appending logic via Enter key
-      // if (existingChildren.length > 0) return;
+        const lineage: NodeRecord[] = [];
+        let currentParent: NodeRecord | undefined = parent;
+        while (currentParent) {
+          lineage.push(currentParent);
+          if (!currentParent.parentId) break;
+          currentParent = nodes.find((item) => item.id === currentParent?.parentId);
+        }
+        const pathContext = lineage
+          .reverse()
+          .map((item) => item.title)
+          .filter((value) => value.length > 0);
 
-      const lineage: NodeRecord[] = [];
-      let currentParent: NodeRecord | undefined = parent;
-      while (currentParent) {
-        lineage.push(currentParent);
-        if (!currentParent.parentId) break;
-        currentParent = nodes.find((item) => item.id === currentParent?.parentId);
-      }
-      const pathContext = lineage
-        .reverse()
-        .map((item) => item.title)
-        .filter((value) => value.length > 0);
 
       const response = await expandNodeAction({
         rootTopic: topic.rootKeyword,
@@ -304,7 +306,6 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         await db.nodes.bulkPut([...newNodes, ...existingNodesToUpdate]);
         await db.edges.bulkPut(newEdges);
       });
-
     } finally {
       setPendingNodeIds((prev) => {
         const next = new Set(prev);
