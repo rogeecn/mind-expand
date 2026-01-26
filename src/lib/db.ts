@@ -73,12 +73,14 @@ export type SettingsRecord = {
   modelId?: string;
   baseURL?: string;
   modelCatalog?: ModelCatalogItem[];
+  timeoutMs?: number;
   modelPresets?: Array<{
     id: string;
     modelId: string;
     note?: string;
     apiToken?: string;
     baseURL?: string;
+    timeoutMs?: number;
   }>;
 };
 

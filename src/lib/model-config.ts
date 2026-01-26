@@ -15,6 +15,7 @@ export const ModelConfigSchema = z.object({
   apiToken: z.string().optional(),
   modelId: z.string().optional(),
   baseURL: z.string().optional(),
+  timeoutMs: z.number().optional(),
   modelCatalog: z.array(ModelCatalogItemSchema).optional()
 });
 
@@ -48,6 +49,7 @@ export const resolveModelConfig = (config?: ModelConfigInput) => {
   const modelName = matched?.model ?? modelId;
   const apiKey = config?.apiToken ?? process.env.OPENAI_API_KEY;
   const baseURL = config?.baseURL || process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+  const timeoutMs = config?.timeoutMs ?? Number(process.env.OPENAI_TIMEOUT_MS || 180000);
 
   return {
     modelCatalog,
@@ -55,6 +57,7 @@ export const resolveModelConfig = (config?: ModelConfigInput) => {
     modelName,
     apiKey,
     baseURL,
+    timeoutMs,
     modelRefName: `${pluginName}/${modelName}`
   };
 };
@@ -67,7 +70,8 @@ export const createAI = (config?: ModelConfigInput) => {
       openAI({
         name: pluginName,
         apiKey: resolved.apiKey,
-        baseURL: resolved.baseURL
+        baseURL: resolved.baseURL,
+        timeout: resolved.timeoutMs
       })
     ]
   });

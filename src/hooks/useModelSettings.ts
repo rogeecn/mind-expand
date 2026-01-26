@@ -14,6 +14,7 @@ export type ModelSettingsState = {
   apiToken: string;
   modelId: string;
   modelCatalogOverride: ModelCatalogItem[];
+  timeoutMs?: number;
   modelPresets: NonNullable<SettingsRecord["modelPresets"]>;
 };
 
@@ -34,18 +35,22 @@ export const useModelSettings = () => {
     apiToken: settingsRecord?.apiToken ?? "",
     modelId,
     modelCatalogOverride: settingsRecord?.modelCatalog ?? [],
+    timeoutMs: settingsRecord?.timeoutMs ?? undefined,
     modelPresets: settingsRecord?.modelPresets ?? []
   };
+
 
   const modelConfig = useMemo<ModelConfigInput>(() => ({
     apiToken: settingsRecord?.apiToken,
     modelId: settingsRecord?.modelId,
     baseURL: settingsRecord?.baseURL,
+    timeoutMs: settingsRecord?.timeoutMs,
     modelCatalog: settingsRecord?.modelCatalog
   }), [
     settingsRecord?.apiToken,
     settingsRecord?.modelId,
     settingsRecord?.baseURL,
+    settingsRecord?.timeoutMs,
     settingsRecord?.modelCatalog
   ]);
 
