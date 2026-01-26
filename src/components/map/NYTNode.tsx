@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import { memo } from "react";
+import { MessageSquare } from "lucide-react";
 import { Handle, Position, type NodeProps } from "reactflow";
 
 export type NYTNodeData = {
@@ -13,6 +14,7 @@ export type NYTNodeData = {
   onSelect?: () => void;
   collapsed?: boolean;
   hasChildren?: boolean;
+  hasChatHistory?: boolean;
 };
 
 export const NYTNode = memo(function NYTNode({ data, selected }: NodeProps<NYTNodeData>) {
@@ -46,16 +48,14 @@ export const NYTNode = memo(function NYTNode({ data, selected }: NodeProps<NYTNo
         <h3 className="line-clamp-2 break-words text-center font-serif text-lg font-semibold tracking-tight">
           {data.title}
         </h3>
+        {data.hasChatHistory && !data.isLoading && (
+          <MessageSquare className="h-3.5 w-3.5 text-gray-500" aria-label="已有研讨记录" />
+        )}
         {data.isLoading && (
            <div className="flex items-center gap-[4px] shrink-0" title="AI 思考中">
              <div className="loading-dot" />
              <div className="loading-dot" />
              <div className="loading-dot" />
-           </div>
-        )}
-        {!data.isLoading && !data.hasChildren && !data.isRoot && (
-           <div className="absolute -right-5 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100">
-             <span className="text-xs text-gray-400 font-serif italic">+</span>
            </div>
         )}
       </div>

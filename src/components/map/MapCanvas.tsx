@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Dexie from "dexie";
+import { useLiveQuery } from "dexie-react-hooks";
 import ReactFlow, {
   Background,
   ConnectionLineType,
@@ -43,23 +45,26 @@ function mapNodeToFlow(
   onSelect: (nodeId: string) => void,
   isLoading: boolean,
   isSelected: boolean,
-  hasChildren: boolean
+  hasChildren: boolean,
+  hasChatHistory: boolean
 ) {
   return {
     id: node.id,
     type: node.nodeStyle,
     position: { x: node.x, y: node.y },
     selected: isSelected,
-    data: {
-      title: node.title,
-      description: node.description,
-      isRoot: node.parentId === null,
-      colorTag: node.colorTag ?? null,
-      collapsed: node.collapsed ?? false,
-      isLoading,
-      hasChildren,
-      onSelect: () => onSelect(node.id)
-    }
+      data: {
+        title: node.title,
+        description: node.description,
+        isRoot: node.parentId === null,
+        colorTag: node.colorTag ?? null,
+        collapsed: node.collapsed ?? false,
+        isLoading,
+        hasChildren,
+        hasChatHistory,
+        onSelect: () => onSelect(node.id)
+      }
+
   } satisfies Node;
 }
 
@@ -78,6 +83,20 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   const { modelConfig } = useModelSettings();
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [pendingNodeIds, setPendingNodeIds] = useState<Set<string>>(new Set());
+  const chatMessages = useLiveQuery(async () => {
+    if (!topicId) return [];
+    return db.chatMessages
+      .where("[topicId+nodeId]")
+      .between([topicId, Dexie.minKey], [topicId, Dexie.maxKey])
+      .toArray();
+  }, [topicId]);
+  const chatMessageCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    chatMessages?.forEach((message) => {
+      counts.set(message.nodeId, (counts.get(message.nodeId) ?? 0) + 1);
+    });
+    return counts;
+  }, [chatMessages]);
 
   // Calculate visible nodes based on collapsed state
   // MEMOIZATION OPTIMIZATION:
@@ -412,16 +431,18 @@ export function MapCanvas({ topicId }: { topicId: string }) {
 
   const flowNodes = useMemo(
     () =>
-      visibleNodes.map((node) =>
-        mapNodeToFlow(
+      visibleNodes.map((node) => {
+        const hasChatHistory = chatMessageCounts.get(node.id) ?? 0;
+        return mapNodeToFlow(
           node,
           setSelectedNodeId,
           pendingNodeIds.has(node.id),
           node.id === selectedNodeId,
-          nodes.some((n) => n.parentId === node.id)
-        )
-      ),
-    [visibleNodes, setSelectedNodeId, pendingNodeIds, selectedNodeId, nodes]
+          nodes.some((n) => n.parentId === node.id),
+          hasChatHistory > 0
+        );
+      }),
+    [visibleNodes, setSelectedNodeId, pendingNodeIds, selectedNodeId, nodes, chatMessageCounts]
   );
 
   const selectedNode = selectedNodeId

@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import { MessageSquare } from "lucide-react";
 import { Handle, Position, type NodeProps } from "reactflow";
 
 export type CompactNodeData = {
@@ -11,6 +12,7 @@ export type CompactNodeData = {
   isLoading?: boolean;
   onSelect?: () => void;
   collapsed?: boolean;
+  hasChatHistory?: boolean;
 };
 
 export function CompactNode({ data, selected }: NodeProps<CompactNodeData>) {
@@ -45,10 +47,13 @@ export function CompactNode({ data, selected }: NodeProps<CompactNodeData>) {
         isConnectable={false}
         className="opacity-0 pointer-events-none cursor-default"
       />
-      <div className="min-w-0">
+      <div className="min-w-0 flex items-center justify-center gap-2">
         <div className="line-clamp-2 text-center font-serif text-sm font-semibold tracking-tight">
           {data.title}
         </div>
+        {data.hasChatHistory && !data.isLoading && (
+          <MessageSquare className="h-3 w-3 text-gray-500" aria-label="已有研讨记录" />
+        )}
       </div>
       <Handle
         type="source"
