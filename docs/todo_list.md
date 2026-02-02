@@ -62,6 +62,7 @@
     - [x] Decouple Layout: Prevent "Double Layout" (Action vs Effect).
 
 - [ ] **Planned: User Custom Model & Token Settings (Confirmed)**
+  - [x] expand-node 提示词加入深度自适应策略（Timeline/Architect/Microscope）
   - [ ] 对齐环境变量：MODEL_CATALOG, MODEL_DEFAULT_ID, OPENAI_API_KEY, OPENAI_BASE_URL
   - [ ] Dexie 新增 `settings` 表，存储用户配置（apiToken, modelId, baseURL, modelCatalog）
   - [ ] 创建 `SettingsModal` 组件（Tabs: 模型设置/导出）

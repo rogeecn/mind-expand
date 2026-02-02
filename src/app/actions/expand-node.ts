@@ -50,7 +50,8 @@ export async function expandNodeAction(input: z.infer<typeof ExpandInputSchema>)
     path_summary: pathSummary,
     path_details: parsed.pathDetails,
     current_node: currentNode,
-    existing_children_summary: existingChildrenSummary
+    existing_children_summary: existingChildrenSummary,
+    current_depth: parsed.pathContext.length + 1
   };
   const { ai, modelRefName } = createAI(parsed.modelConfig);
   console.info("[ai:expand-node] request", {
@@ -67,6 +68,7 @@ export async function expandNodeAction(input: z.infer<typeof ExpandInputSchema>)
       path_details: { title: string; description: string }[];
       current_node: string;
       existing_children_summary: string;
+      current_depth: number;
     },
     options: { model: string; output: { schema: typeof ExpandOutputSchema } }
   ) => Promise<{ output: z.infer<typeof ExpandOutputSchema> }>;
