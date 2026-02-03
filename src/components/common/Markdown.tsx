@@ -3,7 +3,7 @@ import clsx from "clsx";
 import ReactMarkdown, { type Components } from "react-markdown";
 
 const PROSE_CLASSES: Record<string, string> = {
-  p: "font-sans text-[15px] leading-7 text-gray-800 mb-4 last:mb-0",
+  p: "font-sans leading-7 text-gray-800 mb-4 last:mb-0",
   h1: "font-serif text-2xl font-bold text-ink mt-6 mb-3 leading-tight",
   h2: "font-serif text-xl font-bold text-ink mt-5 mb-2.5 leading-tight",
   h3: "font-serif text-lg font-bold text-ink mt-4 mb-2 leading-tight uppercase tracking-wide",
