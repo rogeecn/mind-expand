@@ -257,7 +257,10 @@ export function NodeDetailsPanel({
     }
   };
 
-  const handleSendMessage = async (message?: string) => {
+  const handleSendMessage = async (
+    message?: string,
+    options?: { quoteId?: string; includeHistory?: boolean }
+  ) => {
     if (isLoading) return;
     const trimmed = (message ?? draft).trim();
     if (!trimmed) return;
@@ -265,7 +268,8 @@ export function NodeDetailsPanel({
     setIsLoading(true);
     setError(null);
     setDraft("");
-    const quoteMessage = activeQuoteId ? messageLookup.get(activeQuoteId) : null;
+    const resolvedQuoteId = options?.quoteId ?? activeQuoteId;
+    const quoteMessage = resolvedQuoteId ? messageLookup.get(resolvedQuoteId) : null;
     const quoteContext = quoteMessage
       ? { role: quoteMessage.role, content: quoteMessage.content }
       : undefined;
@@ -274,7 +278,7 @@ export function NodeDetailsPanel({
       nodeId: node.id,
       role: "user",
       content: trimmed,
-      quoteId: activeQuoteId ?? undefined
+      quoteId: resolvedQuoteId ?? undefined
     });
     await db.chatMessages.put(userMessage);
     setActiveQuoteId(null);
@@ -284,7 +288,7 @@ export function NodeDetailsPanel({
         strategy: selectedStrategy,
         intensity: depth,
         question: trimmed,
-        includeHistory: true,
+        includeHistory: options?.includeHistory ?? true,
         quoteContext
       });
     } catch (requestError) {
@@ -473,7 +477,12 @@ export function NodeDetailsPanel({
                                 <button
                                   key={`${message.id}-${suggestion}`}
                                   type="button"
-                                  onClick={() => handleSendMessage(suggestion)}
+                                  onClick={() =>
+                                    handleSendMessage(suggestion, {
+                                      quoteId: message.id,
+                                      includeHistory: false
+                                    })
+                                  }
                                   className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-normal text-gray-700 transition hover:border-gray-300 hover:bg-gray-100 hover:text-gray-800"
                                 >
                                   {suggestion}
