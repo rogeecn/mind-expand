@@ -61,6 +61,16 @@
     - [x] Optimize `MapCanvas` re-renders (Memoize `visibleNodes` calculation more strictly).
     - [x] Decouple Layout: Prevent "Double Layout" (Action vs Effect).
 
+- [x] **Planned: Node Ordering (Confirmed)**
+  - [x] Dexie `NodeRecord` 新增 `order?: number`
+  - [x] Dexie 升级到 v8（兼容旧数据，`order` 缺省走 fallback）
+  - [x] Root 节点默认 `order=0`
+  - [x] AI 子节点追加 `order`（append 策略）
+    - [x] 计算 `maxOrder = max(siblings.order ?? 0)`
+    - [x] 新节点从 `maxOrder + 1` 递增
+  - [x] Layout 对同级节点按 `order` 排序
+    - [x] `order` 相同或缺失时按 `createdAt` 兜底
+
 - [ ] **Planned: User Custom Model & Token Settings (Confirmed)**
   - [x] expand-node 提示词加入深度自适应策略（Timeline/Architect/Microscope）
   - [ ] 对齐环境变量：MODEL_CATALOG, MODEL_DEFAULT_ID, OPENAI_API_KEY, OPENAI_BASE_URL

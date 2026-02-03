@@ -21,6 +21,7 @@ export type NodeRecord = {
   id: string;
   topicId: string;
   parentId: string | null;
+  order?: number;
   title: string;
   description: string;
   x: number;
@@ -150,6 +151,14 @@ class MindMapDatabase extends Dexie {
     });
 
     this.version(7).stores({
+      topics: "id, rootKeyword, updatedAt",
+      nodes: "id, topicId, parentId",
+      edges: "id, topicId, source",
+      chatMessages: "id, [topicId+nodeId], createdAt",
+      settings: "id"
+    });
+
+    this.version(8).stores({
       topics: "id, rootKeyword, updatedAt",
       nodes: "id, topicId, parentId",
       edges: "id, topicId, source",

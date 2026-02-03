@@ -68,7 +68,12 @@ export function layoutWithD3Tree(nodes: NodeRecord[]) {
   if (roots.length === 0) return [];
 
   const buildTree = (node: NodeRecord): LayoutNode => {
-    const children = byParent.get(node.id) ?? [];
+    const children = (byParent.get(node.id) ?? []).slice().sort((a, b) => {
+      const orderA = a.order ?? 0;
+      const orderB = b.order ?? 0;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.createdAt - b.createdAt;
+    });
     return {
       ...node,
       children: children.map(buildTree)

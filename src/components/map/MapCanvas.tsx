@@ -255,11 +255,17 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         modelConfig
       });
 
+      const maxOrder = existingChildren.reduce(
+        (max, child) => Math.max(max, child.order ?? 0),
+        -1
+      );
+
       // 1. Create new nodes with temporary positions
-      const newNodes: NodeRecord[] = response.nodes.map((node) => ({
+      const newNodes: NodeRecord[] = response.nodes.map((node, index) => ({
         id: createId(),
         topicId: topic.id,
         parentId: parent.id,
+        order: maxOrder + 1 + index,
         title: node.title,
         description: [node.reason, node.depth_thought].filter(Boolean).join("\n\n"),
         x: 0,
