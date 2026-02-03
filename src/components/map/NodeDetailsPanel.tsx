@@ -434,7 +434,7 @@ export function NodeDetailsPanel({
                                   key={`${message.id}-${suggestion}`}
                                   type="button"
                                   onClick={() => handleSendMessage(suggestion)}
-                                  className="border border-gray-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-500 transition hover:border-black hover:text-black"
+                                  className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-normal text-gray-700 transition hover:border-gray-300 hover:bg-gray-100 hover:text-gray-800"
                                 >
                                   {suggestion}
                                 </button>
