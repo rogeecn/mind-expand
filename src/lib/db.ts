@@ -58,6 +58,7 @@ export type ChatMessageRecord = {
     | "second_order"
     | "constraints"
     | "systems";
+  suggestions?: string[];
   createdAt: number;
 };
 
@@ -159,6 +160,14 @@ class MindMapDatabase extends Dexie {
     });
 
     this.version(8).stores({
+      topics: "id, rootKeyword, updatedAt",
+      nodes: "id, topicId, parentId",
+      edges: "id, topicId, source",
+      chatMessages: "id, [topicId+nodeId], createdAt",
+      settings: "id"
+    });
+
+    this.version(9).stores({
       topics: "id, rootKeyword, updatedAt",
       nodes: "id, topicId, parentId",
       edges: "id, topicId, source",

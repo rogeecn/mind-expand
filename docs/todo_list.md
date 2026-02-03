@@ -71,6 +71,14 @@
   - [x] Layout 对同级节点按 `order` 排序
     - [x] `order` 相同或缺失时按 `createdAt` 兜底
 
+- [x] **Planned: Chat Follow-up Questions UI (Confirmed)**
+  - [x] ChatMessageRecord 新增 `suggestions?: string[]`
+  - [x] Dexie 升级到 v9（兼容旧消息）
+  - [x] `buildAssistantMarkdown` 不再拼接 `further_questions`
+  - [x] assistant 消息保存 `suggestions`
+  - [x] Chat 气泡下方渲染可点击问题 Chips
+  - [x] 点击 Chip 走 `intent` 模式（等同输入框提问）
+
 - [ ] **Planned: User Custom Model & Token Settings (Confirmed)**
   - [x] expand-node 提示词加入深度自适应策略（Timeline/Architect/Microscope）
   - [ ] 对齐环境变量：MODEL_CATALOG, MODEL_DEFAULT_ID, OPENAI_API_KEY, OPENAI_BASE_URL

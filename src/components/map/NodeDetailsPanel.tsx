@@ -66,15 +66,12 @@ const buildAssistantMarkdown = (response: {
   core_insight: string;
   analysis_blocks: { title: string; content: string }[];
   mental_model_tip: string;
-  further_questions: string[];
 }) => {
   const blocks = response.analysis_blocks.map((block) => `### ${block.title}\n${block.content}`);
-  const questions = response.further_questions.map((item) => `- ${item}`).join("\n");
   return [
     `**${response.core_insight}**`,
     ...blocks,
-    response.mental_model_tip ? `> ${response.mental_model_tip}` : null,
-    response.further_questions.length > 0 ? `### 后续思考\n${questions}` : null
+    response.mental_model_tip ? `> ${response.mental_model_tip}` : null
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -221,7 +218,8 @@ export function NodeDetailsPanel({
       topicId: node.topicId,
       nodeId: node.id,
       role: "assistant",
-      content: buildAssistantMarkdown(response)
+      content: buildAssistantMarkdown(response),
+      suggestions: response.further_questions
     });
     await db.chatMessages.put(assistantMessage);
   };
@@ -250,9 +248,9 @@ export function NodeDetailsPanel({
     }
   };
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (message?: string) => {
     if (isLoading) return;
-    const trimmed = draft.trim();
+    const trimmed = (message ?? draft).trim();
     if (!trimmed) return;
     setActivePrompt(null);
     setIsLoading(true);
@@ -422,15 +420,29 @@ export function NodeDetailsPanel({
                       </div>
                     </div>
                     
-                    {isUser ? (
-                      <p className="font-serif text-lg leading-relaxed text-ink pl-4 border-l-2 border-amber-200">
-                        {message.content}
-                      </p>
-                    ) : (
-                      <div className="pl-4">
-                        <Markdown content={message.content} />
-                      </div>
-                    )}
+                      {isUser ? (
+                        <p className="font-serif text-lg leading-relaxed text-ink pl-4 border-l-2 border-amber-200">
+                          {message.content}
+                        </p>
+                      ) : (
+                        <div className="pl-4 space-y-3">
+                          <Markdown content={message.content} />
+                          {(message.suggestions?.length ?? 0) > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {message.suggestions?.map((suggestion) => (
+                                <button
+                                  key={`${message.id}-${suggestion}`}
+                                  type="button"
+                                  onClick={() => handleSendMessage(suggestion)}
+                                  className="border border-gray-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-500 transition hover:border-black hover:text-black"
+                                >
+                                  {suggestion}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     
                     {isLoading && isUser && message.id === lastUserMessageId && (
                        <div className="mt-4 pl-4 text-xs font-bold uppercase tracking-widest text-gray-400 animate-pulse">
@@ -478,7 +490,7 @@ export function NodeDetailsPanel({
               className="w-full border border-gray-300 p-4 pr-12 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-colors"
             />
             <button
-               onClick={handleSendMessage}
+               onClick={() => handleSendMessage()}
                disabled={!draft.trim() || isLoading}
                className="absolute right-3 bottom-3 p-1.5 text-gray-400 hover:text-black disabled:opacity-30 disabled:hover:text-gray-400 transition"
             >
