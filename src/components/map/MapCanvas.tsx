@@ -83,6 +83,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   const { modelConfig } = useModelSettings();
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [pendingNodeIds, setPendingNodeIds] = useState<Set<string>>(new Set());
+  const [defaultNodeView, setDefaultNodeView] = useState<"summary" | "chat">("summary");
   const chatMessages = useLiveQuery(async () => {
     if (!topicId) return [];
     return db.chatMessages
@@ -484,7 +485,14 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         nodeTypes={nodeTypes}
         onInit={setReactFlowInstance}
         onNodeDragStop={(_, node) => updateNodePosition(node.id, node.position.x, node.position.y)}
-        onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+        onNodeClick={(_, node) => {
+          setDefaultNodeView("summary");
+          setSelectedNodeId(node.id);
+        }}
+        onNodeDoubleClick={(_, node) => {
+          setDefaultNodeView("chat");
+          setSelectedNodeId(node.id);
+        }}
         onPaneClick={() => setSelectedNodeId(null)}
         nodesConnectable={false}
         nodesDraggable={false}
@@ -511,6 +519,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
           node={selectedNode}
           pathContext={pathContext}
           onClose={() => setSelectedNodeId(null)}
+          initialViewMode={defaultNodeView}
         />
       )}
     </div>

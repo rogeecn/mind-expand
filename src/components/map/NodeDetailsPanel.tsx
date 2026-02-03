@@ -82,15 +82,17 @@ type NodeDetailsPanelProps = {
   node: NodeRecord;
   pathContext: string[];
   onClose: () => void;
+  initialViewMode?: "summary" | "chat";
 };
 
 export function NodeDetailsPanel({
   node,
   pathContext,
-  onClose
+  onClose,
+  initialViewMode = "summary"
 }: NodeDetailsPanelProps) {
   // Mode: 'summary' (default, compact) | 'chat' (expanded, interactive)
-  const [viewMode, setViewMode] = useState<"summary" | "chat">("summary");
+  const [viewMode, setViewMode] = useState<"summary" | "chat">(initialViewMode);
   const { modelConfig } = useModelSettings();
   const [expanded, setExpanded] = useState(false); // Controls height in Chat mode
   const [activePrompt, setActivePrompt] = useState<StrategyType | null>(null);
@@ -118,8 +120,8 @@ export function NodeDetailsPanel({
     setActiveQuoteId(null);
     // Reset to summary mode when switching nodes, unless we want to persist the "chatting" state?
     // Let's reset to summary for "Editorial" feel (clean slate).
-    setViewMode("summary"); 
-  }, [node.id]);
+    setViewMode(initialViewMode); 
+  }, [node.id, initialViewMode]);
 
   useEffect(() => {
     // AutoTextarea handles resizing; this is reserved if we need extra draft behavior later.
