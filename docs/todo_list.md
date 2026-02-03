@@ -88,6 +88,11 @@
   - [x] AI 请求使用 Quote Focus 模式（忽略历史，聚焦引用内容）
   - [x] 消息气泡渲染引用块（仅一层）
 
+- [x] **Strategic Docs (VC Planning)**
+  - [x] 产品路线图：`docs/product_roadmap_vc.md`
+  - [x] 定价策略：`docs/pricing_strategy_vc.md`
+  - [x] 增长策略：`docs/growth_strategy_vc.md`
+
 - [ ] **Planned: User Custom Model & Token Settings (Confirmed)**
   - [x] expand-node 提示词加入深度自适应策略（Timeline/Architect/Microscope）
   - [ ] 对齐环境变量：MODEL_CATALOG, MODEL_DEFAULT_ID, OPENAI_API_KEY, OPENAI_BASE_URL
