@@ -79,6 +79,15 @@
   - [x] Chat 气泡下方渲染可点击问题 Chips
   - [x] 点击 Chip 走 `intent` 模式（等同输入框提问）
 
+- [x] **Planned: Chat Quote Reply (Confirmed)**
+  - [x] ChatMessageRecord 新增 `quoteId?: string`
+  - [x] Dexie 升级到 v10（兼容旧消息）
+  - [x] 消息操作新增「引用」按钮（单层引用）
+  - [x] 输入框显示引用条，可取消
+  - [x] 用户消息保存 `quoteId`
+  - [x] AI 请求使用 Quote Focus 模式（忽略历史，聚焦引用内容）
+  - [x] 消息气泡渲染引用块（仅一层）
+
 - [ ] **Planned: User Custom Model & Token Settings (Confirmed)**
   - [x] expand-node 提示词加入深度自适应策略（Timeline/Architect/Microscope）
   - [ ] 对齐环境变量：MODEL_CATALOG, MODEL_DEFAULT_ID, OPENAI_API_KEY, OPENAI_BASE_URL

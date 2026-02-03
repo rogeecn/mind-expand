@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import clsx from "clsx";
-import { ChevronUp, Copy, Maximize2, Minimize2, X, MessageSquare, ArrowRight, Trash2, Check } from "lucide-react";
+import { ChevronUp, Copy, Maximize2, Minimize2, X, MessageSquare, ArrowRight, Trash2, Check, Quote } from "lucide-react";
 import { AutoTextarea } from "@/components/common/AutoTextarea";
 import { Markdown } from "@/components/common/Markdown";
 import { db, type ChatMessageRecord, type NodeRecord } from "@/lib/db";
@@ -99,6 +99,7 @@ export function NodeDetailsPanel({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null);
 
   const messages = useLiveQuery(async () => {
     return db.chatMessages
@@ -114,6 +115,7 @@ export function NodeDetailsPanel({
     setError(null);
     setActivePrompt(null);
     setIsFullscreen(false);
+    setActiveQuoteId(null);
     // Reset to summary mode when switching nodes, unless we want to persist the "chatting" state?
     // Let's reset to summary for "Editorial" feel (clean slate).
     setViewMode("summary"); 
@@ -122,6 +124,10 @@ export function NodeDetailsPanel({
   useEffect(() => {
     // AutoTextarea handles resizing; this is reserved if we need extra draft behavior later.
   }, [draft]);
+
+  const messageLookup = useMemo(() => {
+    return new Map((messages ?? []).map((message) => [message.id, message]));
+  }, [messages]);
 
   const displayMessages = useMemo<ChatDisplayMessage[]>(() => {
     let currentSource = DEFAULT_SOURCE_LABEL;
@@ -178,6 +184,7 @@ export function NodeDetailsPanel({
 
   const handleDeleteMessage = async (messageId: string) => {
     await db.chatMessages.delete(messageId);
+    setActiveQuoteId((prev) => (prev === messageId ? null : prev));
   };
 
   // ... sendAssistantReply implementation ...
@@ -186,6 +193,7 @@ export function NodeDetailsPanel({
     intensity: number;
     question?: string;
     includeHistory?: boolean;
+    quoteContext?: { role: string; content: string };
   }) => {
     const fullPath =
       pathContext.length > 1 ? pathContext.slice(0, -1).join(" -> ") : pathContext[0] ?? node.title;
@@ -211,7 +219,8 @@ export function NodeDetailsPanel({
       current_node: currentNode,
       strategy: payload.strategy,
       intensity: payload.intensity,
-      history,
+      history: payload.quoteContext ? undefined : history,
+      quoteContext: payload.quoteContext,
       modelConfig
     });
     const assistantMessage = createChatMessage({
@@ -256,16 +265,28 @@ export function NodeDetailsPanel({
     setIsLoading(true);
     setError(null);
     setDraft("");
+    const quoteMessage = activeQuoteId ? messageLookup.get(activeQuoteId) : null;
+    const quoteContext = quoteMessage
+      ? { role: quoteMessage.role, content: quoteMessage.content }
+      : undefined;
     const userMessage = createChatMessage({
       topicId: node.topicId,
       nodeId: node.id,
       role: "user",
-      content: trimmed
+      content: trimmed,
+      quoteId: activeQuoteId ?? undefined
     });
     await db.chatMessages.put(userMessage);
+    setActiveQuoteId(null);
     try {
       const depth = Math.min(pathContext.length + 1, 5);
-      await sendAssistantReply({ strategy: selectedStrategy, intensity: depth, question: trimmed, includeHistory: true });
+      await sendAssistantReply({
+        strategy: selectedStrategy,
+        intensity: depth,
+        question: trimmed,
+        includeHistory: true,
+        quoteContext
+      });
     } catch (requestError) {
       console.error("Failed to generate chat reply", requestError);
       setError("生成失败，请重试。");
@@ -410,6 +431,13 @@ export function NodeDetailsPanel({
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button
+                           onClick={() => setActiveQuoteId((prev) => (prev === message.id ? null : message.id))}
+                           className={clsx(actionClass, activeQuoteId === message.id && "border-gray-700 text-gray-700")}
+                           title={activeQuoteId === message.id ? "取消引用" : "引用"}
+                         >
+                           <Quote className="h-3 w-3" />
+                         </button>
+                         <button
                            onClick={() => handleCopy(message.id, message.content)}
                            className={clsx(actionClass, copiedMessageId === message.id && "border-green-500 text-green-600")}
                            title={copiedMessageId === message.id ? "已复制" : "复制"}
@@ -421,9 +449,21 @@ export function NodeDetailsPanel({
                     </div>
                     
                       {isUser ? (
-                        <p className="font-serif text-lg leading-relaxed text-ink pl-4 border-l-2 border-amber-200">
-                          {message.content}
-                        </p>
+                        <div className="pl-4 space-y-3">
+                          {message.quoteId && messageLookup.get(message.quoteId) && (
+                            <div className="border-l-2 border-gray-300 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                              <span className="block text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                                引用
+                              </span>
+                              <p className="mt-1 line-clamp-3 leading-5">
+                                {messageLookup.get(message.quoteId)?.content}
+                              </p>
+                            </div>
+                          )}
+                          <p className="font-serif text-lg leading-relaxed text-ink border-l-2 border-amber-200 pl-4">
+                            {message.content}
+                          </p>
+                        </div>
                       ) : (
                         <div className="pl-4 space-y-3">
                           <Markdown content={message.content} />
@@ -462,6 +502,25 @@ export function NodeDetailsPanel({
       {/* Footer Controls */}
       <div className="border-t border-gray-200 bg-[#F9F9F7] px-6 py-4">
         <div className="max-w-4xl mx-auto space-y-4">
+          {activeQuoteId && messageLookup.get(activeQuoteId) && (
+            <div className="rounded-sm border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">正在引用</p>
+                  <p className="mt-1 line-clamp-2 leading-5">
+                    {messageLookup.get(activeQuoteId)?.content}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveQuoteId(null)}
+                  className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-black"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          )}
           <div className="flex flex-wrap gap-2 justify-start">
             {PROMPT_TABS.map((tab) => (
               <button

@@ -10,6 +10,9 @@ input:
     history:
       - role: string
         content: string
+    quote_context:
+      role: string
+      content: string
 output:
   schema:
     strategy_name: string
@@ -30,6 +33,12 @@ output:
 - Lv 3-4: 侧重于逻辑推演与关联，语气客观专业。
 - Lv 5: 侧重于批判性思维与本质揭露，语言犀利，必须指出用户可能忽视的假设与盲点。
 
+{{#if quote_context}}
+# Quote Focus (单层引用)
+用户在回复以下这条消息，请聚焦该引用内容，忽略其它历史：
+- **{{quote_context.role}}**: {{quote_context.content}}
+{{/if}}
+
 {{#if history}}
 # Conversation Context
 这是最近的对话历史，请基于最后一条用户消息推演意图，并保持连贯的上下文：
@@ -40,7 +49,7 @@ output:
 
 # Execution Process (Internal Monologue)
 1. Intent Parsing: 明确用户当下最核心的疑问、目标或困惑。
-2. Context Alignment: 确保回答不脱离 {{full_path}} 语境，并围绕 {{current_node}}。
+2. Context Alignment: 确保回答不脱离 {{full_path}} 语境，并围绕 {{current_node}}。如存在引用，优先围绕引用内容进行回应。
 3. Insight Extraction: 给出最能帮助用户前进的关键洞见与结构化分解。
 4. Refinement: 删除空话与重复，保持高密度表达。
 
