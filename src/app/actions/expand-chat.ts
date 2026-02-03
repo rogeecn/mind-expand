@@ -35,6 +35,7 @@ const ExpandChatInputSchema = z.discriminatedUnion("mode", [
     current_node: z.string(),
     strategy: StrategySchema,
     intensity: z.number().min(1).max(5),
+    question: z.string().optional(),
     history: ChatHistorySchema.optional(),
     quoteContext: QuoteContextSchema.optional(),
     modelConfig: ModelConfigSchema.optional()
@@ -44,6 +45,7 @@ const ExpandChatInputSchema = z.discriminatedUnion("mode", [
     full_path: z.string(),
     current_node: z.string(),
     intensity: z.number().min(1).max(5),
+    question: z.string().optional(),
     history: ChatHistorySchema.optional(),
     quoteContext: QuoteContextSchema.optional(),
     modelConfig: ModelConfigSchema.optional()
@@ -86,6 +88,7 @@ export async function expandChatAction(input: z.infer<typeof ExpandChatInputSche
         intensity: number;
         history?: { role: string; content: string }[];
         quote_context?: { role: string; content: string };
+        question?: string;
       },
       options: { model: string; output: { schema: typeof ExpandChatOutputSchema } }
     ) => Promise<{ output: z.infer<typeof ExpandChatOutputSchema> }>;
@@ -94,6 +97,7 @@ export async function expandChatAction(input: z.infer<typeof ExpandChatInputSche
       current_node: parsed.current_node,
       strategy: parsed.strategy,
       intensity: parsed.intensity,
+      question: parsed.question,
       history: parsed.quoteContext ? undefined : parsed.history,
       quote_context: parsed.quoteContext
     };
@@ -122,15 +126,17 @@ export async function expandChatAction(input: z.infer<typeof ExpandChatInputSche
       full_path: string;
       current_node: string;
       intensity: number;
-      history?: { role: string; content: string }[];
-      quote_context?: { role: string; content: string };
-    },
+    history?: { role: string; content: string }[];
+    quote_context?: { role: string; content: string };
+    question?: string;
+  },
     options: { model: string; output: { schema: typeof ExpandChatOutputSchema } }
   ) => Promise<{ output: z.infer<typeof ExpandChatOutputSchema> }>;
   const intentPayload = {
     full_path: parsed.full_path,
     current_node: parsed.current_node,
     intensity: parsed.intensity,
+    question: parsed.question,
     history: parsed.quoteContext ? undefined : parsed.history,
     quote_context: parsed.quoteContext
   };

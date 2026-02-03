@@ -214,13 +214,15 @@ export function NodeDetailsPanel({
     }
 
     const currentNode = node.title;
+    const questionText = payload.question?.trim();
 
     const response = await expandChatAction({
-      mode: payload.question ? "intent" : "strategy",
+      mode: questionText ? "intent" : "strategy",
       full_path: fullPath,
       current_node: currentNode,
       strategy: payload.strategy,
       intensity: payload.intensity,
+      question: questionText,
       history: payload.quoteContext ? undefined : history,
       quoteContext: payload.quoteContext,
       modelConfig
