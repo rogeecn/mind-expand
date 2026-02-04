@@ -11,6 +11,7 @@ import { calculateChildPositions } from "@/lib/layout";
 import type { EdgeRecord, NodeRecord, TopicRecord } from "@/lib/db";
 import { db } from "@/lib/db";
 import { createId } from "@/lib/uuid";
+import Dexie from "dexie";
 import { PanelLeftOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -56,6 +57,29 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
   const handleCreateTopic = () => {
     setIsCreating(true);
     router.push("/topic/new");
+  };
+
+  const handleDeleteTopic = async (topicId: string) => {
+    await db.transaction("rw", db.topics, db.nodes, db.edges, db.chatMessages, async () => {
+      const nodeIds = await db.nodes.where("topicId").equals(topicId).primaryKeys();
+      const edgeIds = await db.edges.where("topicId").equals(topicId).primaryKeys();
+      const chatIds = await db.chatMessages
+        .where("[topicId+nodeId]")
+        .between([topicId, Dexie.minKey], [topicId, Dexie.maxKey])
+        .primaryKeys();
+
+      await db.nodes.bulkDelete(nodeIds);
+      await db.edges.bulkDelete(edgeIds);
+      await db.chatMessages.bulkDelete(chatIds);
+      await db.topics.delete(topicId);
+    });
+
+    if (activeTopicId === topicId) {
+      localStorage.removeItem("activeTopicId");
+      setActiveTopicId(null);
+      setIsReady(false);
+      router.push("/");
+    }
   };
 
   const handleCreateSubmit = async ({
@@ -189,6 +213,7 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
           onCreateTopic={handleCreateTopic}
           onOpenManager={() => setIsManagerOpen(true)}
           onOpenSettings={() => setIsSettingsOpen(true)}
+          onDeleteTopic={handleDeleteTopic}
           isOpen={isSidebarOpen}
           onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         />

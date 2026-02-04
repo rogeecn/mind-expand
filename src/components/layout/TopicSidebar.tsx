@@ -3,7 +3,9 @@
 import { db } from "@/lib/db";
 import clsx from "clsx";
 import { useLiveQuery } from "dexie-react-hooks";
-import { PanelLeftClose, Plus, Settings, Archive } from "lucide-react";
+import { PanelLeftClose, Plus, Settings, Archive, MoreVertical, Trash2 } from "lucide-react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { useState } from "react";
 
 type SidebarProps = {
   activeTopicId: string | null;
@@ -11,6 +13,7 @@ type SidebarProps = {
   onCreateTopic: () => void;
   onOpenManager: () => void;
   onOpenSettings: () => void;
+  onDeleteTopic: (topicId: string) => void;
   isOpen: boolean;
   onToggle: () => void;
 };
@@ -21,13 +24,31 @@ export function TopicSidebar({
   onCreateTopic,
   onOpenManager,
   onOpenSettings,
+  onDeleteTopic,
   isOpen,
   onToggle
 }: SidebarProps) {
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const topics = useLiveQuery(async () => {
     return db.topics.orderBy("updatedAt").reverse().toArray();
   }, []);
+
+  const handleDeleteClick = (e: React.MouseEvent, topicId: string) => {
+    e.stopPropagation();
+    setDeleteConfirmId(topicId);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirmId) {
+      onDeleteTopic(deleteConfirmId);
+      setDeleteConfirmId(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirmId(null);
+  };
 
   const formatDate = (ts: number) => {
     return new Date(ts).toLocaleDateString("en-US", {
@@ -128,9 +149,39 @@ export function TopicSidebar({
                     <span className="font-serif text-lg font-bold leading-none text-ink truncate pr-4">
                        {topic.masterTitle || topic.rootKeyword}
                     </span>
-                    <span className={clsx("text-[10px] font-mono tracking-tighter shrink-0", isActive ? "text-ink" : "text-gray-300")}>
-                      #{String(topics.length - index).padStart(2, '0')}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={clsx("text-[10px] font-mono tracking-tighter", isActive ? "text-ink" : "text-gray-300")}>
+                        #{String(topics.length - index).padStart(2, '0')}
+                      </span>
+                      <DropdownMenu.Root>
+                        <DropdownMenu.Trigger asChild>
+                          <button
+                            type="button"
+                            onClick={(e) => e.stopPropagation()}
+                            className="opacity-0 group-hover:opacity-100 focus:opacity-100 -mr-1 flex h-6 w-6 items-center justify-center text-gray-400 hover:text-ink transition-opacity"
+                            aria-label={`Options for ${topic.masterTitle || topic.rootKeyword}`}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                        </DropdownMenu.Trigger>
+                        <DropdownMenu.Portal>
+                          <DropdownMenu.Content
+                            className="min-w-[140px] bg-white border border-gray-200 shadow-lg py-1 z-50"
+                            sideOffset={4}
+                            align="end"
+                          >
+                            <DropdownMenu.Separator className="h-px bg-gray-100 my-1" />
+                            <DropdownMenu.Item
+                              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 outline-none cursor-pointer hover:bg-red-50 hover:text-red-700"
+                              onClick={(e) => handleDeleteClick(e as unknown as React.MouseEvent, topic.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              删除
+                            </DropdownMenu.Item>
+                          </DropdownMenu.Content>
+                        </DropdownMenu.Portal>
+                      </DropdownMenu.Root>
+                    </div>
                   </div>
 
                   <p
@@ -158,6 +209,33 @@ export function TopicSidebar({
           </div>
         )}
       </div>
+
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-sm bg-white border border-gray-200 p-6 shadow-xl">
+            <h3 className="font-serif text-lg font-bold text-ink">确认删除</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              删除后无法恢复，确定要删除这个主题吗？
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleCancelDelete}
+                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-ink transition-colors"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors"
+              >
+                删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

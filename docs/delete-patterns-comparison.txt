@@ -1,0 +1,186 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    DELETE BUTTON PATTERNS COMPARISON                         ║
+║                     Editorial & Productivity Apps                            ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ PATTERN A: Hover-Reveal Direct Delete Icon                                  │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  IDLE:     [ Item Title                                    ]                 │
+│                                                                              │
+│  HOVER:    [ Item Title                                 🗑️ ]                 │
+│                                                           ↑ Trash icon       │
+│                                                                              │
+│  Used by: Gmail, Apple Mail, Slack                                          │
+│  Pros: Fast, direct action                                                  │
+│  Cons: Aggressive, easy to misclick                                         │
+│  NYT Fit: ⚠️  Too aggressive for editorial content                          │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ PATTERN B: Three-Dot Overflow Menu (RECOMMENDED) ✅                          │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  IDLE:     [ Item Title                                    ]                 │
+│                                                                              │
+│  HOVER:    [ Item Title                                  ⋮ ]                 │
+│                                                           ↑ Three dots       │
+│                                                                              │
+│  MENU:     [ Item Title                                  ⋮ ]                 │
+│                                                  ┌───────────────┐           │
+│                                                  │ Rename        │           │
+│                                                  │ Export        │           │
+│                                                  ├───────────────┤           │
+│                                                  │ Delete        │ ← Red     │
+│                                                  └───────────────┘           │
+│                                                                              │
+│  Used by: Notion, NYT Saved Articles, Medium, Linear                        │
+│  Pros: Clean, scalable, safe, professional                                  │
+│  Cons: Two-click process                                                    │
+│  NYT Fit: ✅ Perfect - editorial standard                                    │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ PATTERN C: Swipe Actions (Mobile)                                           │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  IDLE:     ┌─────────────────────────────────┐                              │
+│            │ Item Title                      │                              │
+│            └─────────────────────────────────┘                              │
+│                                                                              │
+│  SWIPE:    ┌──────────────────────┐ [ Delete ]                              │
+│            │ Item Title           │  ↑ Red bg                               │
+│            └──────────────────────┘                                         │
+│            ← Swipe left reveals action                                      │
+│                                                                              │
+│  Used by: iOS Mail, Apple Notes, Todoist                                    │
+│  Pros: Native feel, gestural, no UI clutter                                 │
+│  Cons: Desktop needs different pattern, accidental swipes                   │
+│  NYT Fit: ❌ Too casual for editorial, web-first app                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ PATTERN D: Context Menu (Right-Click)                                       │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  IDLE:     [ Item Title                                    ]                 │
+│                                                                              │
+│  RIGHT-    [ Item Title                                    ]                 │
+│  CLICK:           ┌───────────────┐                                         │
+│                   │ Open          │                                         │
+│                   │ Rename        │                                         │
+│                   │ Export        │                                         │
+│                   ├───────────────┤                                         │
+│                   │ Delete        │ ← Red                                   │
+│                   └───────────────┘                                         │
+│                                                                              │
+│  Used by: Windows Explorer, VS Code, Figma                                  │
+│  Pros: No UI clutter, power user friendly                                   │
+│  Cons: Not discoverable, mobile long-press awkward                          │
+│  NYT Fit: ✅ Good as secondary option                                        │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ PATTERN E: Inline Persistent Icon                                           │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ALWAYS:   [ ☐  Item Title                              🗑️  ]               │
+│             ↑ Checkbox                                   ↑ Always visible   │
+│                                                                              │
+│  Used by: Todoist, Google Keep, Simple todo apps                            │
+│  Pros: Always visible, no hover needed                                      │
+│  Cons: Cluttered, implies disposability                                     │
+│  NYT Fit: ❌ Too casual, contradicts editorial aesthetic                     │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                           RECOMMENDED SOLUTION                               ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║                                                                              ║
+║  PRIMARY:   Three-Dot Overflow Menu (Pattern B)                              ║
+║             • Hover-reveal on desktop                                        ║
+║             • Always accessible on mobile (larger touch target)              ║
+║             • Menu contains: Rename, Export, [Divider], Delete               ║
+║                                                                              ║
+║  SECONDARY: Right-Click Context Menu (Pattern D)                             ║
+║             • For power users                                                ║
+║             • Same menu structure as three-dot                               ║
+║                                                                              ║
+║  SAFETY:    Confirmation Modal                                               ║
+║             • "Delete Topic?" heading                                        ║
+║             • Show topic name + node count                                   ║
+║             • [Cancel] [Delete Permanently] buttons                          ║
+║                                                                              ║
+║  FUTURE:    Toast with Undo (Phase 2)                                        ║
+║             • Immediate deletion                                             ║
+║             • 5-second undo window                                           ║
+║             • Matches Linear/Notion pattern                                  ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ VISUAL HIERARCHY (NYT Style)                                                │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  1. PRIMARY ACTION (Entire item clickable)                                   │
+│     └─ Opens/selects the topic                                              │
+│                                                                              │
+│  2. SECONDARY ACTIONS (Hover-reveal three-dot)                               │
+│     ├─ Rename Topic                                                         │
+│     └─ Export Backup                                                        │
+│                                                                              │
+│  3. DESTRUCTIVE ACTION (Nested, red text, separated)                         │
+│     └─ Delete                                                               │
+│                                                                              │
+│  PRINCIPLE: Destructive actions are NEVER prominent                          │
+│             Content preservation > easy deletion                             │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ ACCESSIBILITY REQUIREMENTS                                                  │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  KEYBOARD:                                                                   │
+│    • Tab → Focuses three-dot button                                         │
+│    • Enter/Space → Opens menu                                               │
+│    • Arrow keys → Navigate menu items                                       │
+│    • Enter → Execute action                                                 │
+│    • Escape → Close menu                                                    │
+│                                                                              │
+│  SCREEN READER:                                                              │
+│    • "Options for Coffee Origins" (three-dot button)                        │
+│    • "Menu opened" announcement                                             │
+│    • "Delete Coffee Origins" (delete button)                                │
+│    • "Dialog: Delete Topic?" (modal)                                        │
+│                                                                              │
+│  FOCUS VISIBLE:                                                              │
+│    • 2px ring on focus (not just hover)                                     │
+│    • Focus returns to trigger after menu closes                             │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          IMPLEMENTATION SUMMARY                              ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║                                                                              ║
+║  Component: src/components/layout/TopicSidebar.tsx                           ║
+║  Library: @radix-ui/react-dropdown-menu                                      ║
+║                                                                              ║
+║  Steps:                                                                      ║
+║  1. Add state: menuOpen, deleteConfirm                                       ║
+║  2. Add MoreVertical icon (opacity-0 → opacity-100 on hover)                 ║
+║  3. Wrap in DropdownMenu with three items + separator                        ║
+║  4. Add confirmation Modal component                                         ║
+║  5. Implement delete handler (db.transaction)                                ║
+║                                                                              ║
+║  Design Tokens:                                                              ║
+║  • Three-dot color: text-gray-400 → hover:text-ink                           ║
+║  • Menu: border-gray-200, bg-white, shadow-lg, rounded-none                  ║
+║  • Delete item: text-gray-700 → hover:bg-red-50 hover:text-red-700           ║
+║  • Modal delete button: bg-red-600 text-white                                ║
+║                                                                              ║
+║  Mobile: 44×44px touch target, larger menu text                              ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
