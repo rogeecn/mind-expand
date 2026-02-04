@@ -274,16 +274,12 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
             <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">
               关于... (Keywords) <span className="text-red-500">*</span>
             </label>
-            <input
+            <textarea
               value={keywordsInput}
               onChange={(e) => setKeywordsInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && hasKeywords && !isGuesserLoading) {
-                  handleStartExploration();
-                }
-              }}
               placeholder="输入关键词，用逗号分隔 (例如: AI, 机器学习)"
-              className="w-full border-b-2 border-gray-200 py-4 font-serif text-3xl text-ink placeholder:text-gray-300 focus:border-black focus:outline-none transition-colors"
+              rows={3}
+              className="w-full border-b-2 border-gray-200 py-4 font-serif text-3xl text-ink placeholder:text-gray-300 focus:border-black focus:outline-none transition-colors resize-none"
             />
           </div>
 
