@@ -1,5 +1,7 @@
 ---
 model: mind-expand/gpt-4o-mini
+deprecated: true
+deprecated_by: topic-guess.prompt
 input:
   schema:
     root_keyword: string

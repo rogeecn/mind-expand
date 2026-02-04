@@ -7,18 +7,36 @@ const defaultStyle: TopicStyle = {
   nodeStyle: "nyt"
 };
 
+export type CreateTopicInput = {
+  keywords: string[];
+  role?: string;
+  goal?: string;
+  masterTitle?: string;
+  description: string;
+  globalConstraints?: string;
+  suggestedFocus?: string[];
+  selectedExtensions?: string[];
+};
+
 export function useTopic(topicId: string | null) {
   const topic = useLiveQuery(async () => {
     if (!topicId) return null;
     return db.topics.get(topicId);
   }, [topicId]);
 
-  const createTopic = async (rootKeyword: string, description: string) => {
+  const createTopic = async (input: CreateTopicInput) => {
     const now = Date.now();
     const newTopic: TopicRecord = {
       id: createId(),
-      rootKeyword,
-      description,
+      role: input.role,
+      goal: input.goal,
+      keywords: input.keywords,
+      selectedExtensions: input.selectedExtensions ?? [],
+      rootKeyword: input.keywords.join(", "),
+      masterTitle: input.masterTitle,
+      description: input.description,
+      globalConstraints: input.globalConstraints,
+      suggestedFocus: input.suggestedFocus,
       styleConfig: defaultStyle,
       createdAt: now,
       updatedAt: now

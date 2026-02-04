@@ -59,18 +59,25 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
   };
 
   const handleCreateSubmit = async ({
-    rootKeyword,
+    keywords,
+    role,
+    goal,
     description,
     masterTitle,
     globalConstraints,
-    suggestedFocus
+    suggestedFocus,
+    selectedExtensions
   }: TopicFormValues) => {
     const trimmedDescription = description.trim();
     const now = Date.now();
 
-    const rootTitle = (masterTitle || rootKeyword).trim();
+    const rootTitle = (masterTitle || keywords.join(", ")).trim();
     const newTopic: TopicRecord = {
       id: createId(),
+      role,
+      goal,
+      keywords,
+      selectedExtensions: selectedExtensions ?? [],
       rootKeyword: rootTitle,
       description: trimmedDescription || "Root topic",
       globalConstraints,

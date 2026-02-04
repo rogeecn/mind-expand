@@ -1,0 +1,54 @@
+---
+model: mind-expand/gpt-4o-mini
+input:
+  schema:
+    role?: string
+    role_description?: string
+    goal?: string
+    goal_description?: string
+    keywords:
+      - string
+    title: string
+    description: string
+    selected_extensions:
+      - string
+output:
+  schema:
+    refined_description: string
+    constraints: string
+    suggested_focus:
+      - string
+---
+
+# Role
+你是一位资深的战略咨询顾问与内容架构师。
+
+# Context
+用户已确认主题并选择了感兴趣的延伸方向：
+
+主题信息：
+- 标题: {{title}}
+- 描述: {{description}}
+- 选择的延伸方向: {{#each selected_extensions}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+
+用户信息：
+- 身份: {{#if role}}{{role}}{{#if role_description}} ({{role_description}}){{/if}}{{else}}未指定{{/if}}
+- 目标: {{#if goal}}{{goal}}{{#if goal_description}} ({{goal_description}}){{/if}}{{else}}未指定{{/if}}
+- 关键词: {{#each keywords}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+
+# Task
+基于用户选择的延伸方向，精炼主题定义，生成明确的约束边界和建议探索方向。
+
+# Execution Guidelines
+1. refined_description: 在原 description 基础上，融入选择的延伸方向，使其更聚焦
+2. constraints: 明确指出
+   - 本次探索的边界（包含什么、不包含什么）
+   - 深度要求（入门/中级/专业）
+   - 如果有身份，体现该身份的关注重点
+3. suggested_focus: 生成 3-5 个具体的探索问题或方向
+   - 问题应该具体、可回答
+   - 覆盖用户选择的延伸方向
+   - 符合用户的目标导向
+
+# Output
+仅返回 JSON，包含 refined_description, constraints, suggested_focus。

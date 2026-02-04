@@ -1,5 +1,10 @@
 "use server";
 
+/**
+ * @deprecated Use topic-guess.ts, topic-extensions.ts, and topic-refine.ts instead.
+ * These actions are kept for backward compatibility only.
+ */
+
 import { z } from "zod";
 import { createAI, ModelConfigSchema } from "@/lib/model-config";
 

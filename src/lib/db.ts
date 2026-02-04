@@ -7,10 +7,15 @@ export type TopicStyle = {
 
 export type TopicRecord = {
   id: string;
+  role?: string;
+  goal?: string;
+  keywords: string[];
+  selectedExtensions?: string[];
+  /** @deprecated Use keywords instead. Kept for backward compatibility. */
   rootKeyword: string;
+  masterTitle?: string;
   description: string;
   globalConstraints?: string;
-  masterTitle?: string;
   suggestedFocus?: string[];
   styleConfig: TopicStyle;
   createdAt: number;
@@ -182,6 +187,25 @@ class MindMapDatabase extends Dexie {
       edges: "id, topicId, source",
       chatMessages: "id, [topicId+nodeId], createdAt",
       settings: "id"
+    });
+
+    this.version(11).stores({
+      topics: "id, rootKeyword, updatedAt",
+      nodes: "id, topicId, parentId",
+      edges: "id, topicId, source",
+      chatMessages: "id, [topicId+nodeId], createdAt",
+      settings: "id"
+    }).upgrade((transaction) => {
+      return transaction.table("topics").toCollection().modify((topic) => {
+        if (!topic.keywords) {
+          topic.keywords = topic.rootKeyword 
+            ? topic.rootKeyword.split(/[,，\s]+/).map((k: string) => k.trim()).filter(Boolean)
+            : [];
+        }
+        if (!topic.selectedExtensions) {
+          topic.selectedExtensions = [];
+        }
+      });
     });
   }
 }
