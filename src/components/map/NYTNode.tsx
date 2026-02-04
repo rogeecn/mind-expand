@@ -5,6 +5,7 @@ import { memo } from "react";
 import { MessageSquare } from "lucide-react";
 import { Handle, Position, type NodeProps } from "reactflow";
 
+
 export type NYTNodeData = {
   title: string;
   description: string;
@@ -31,7 +32,6 @@ export const NYTNode = memo(function NYTNode({ data, selected }: NodeProps<NYTNo
           : "border-gray-300 hover:border-gray-500 hover:shadow-sm bg-white",
         data.collapsed && data.hasChildren && "shadow-[3px_3px_0_white,4px_4px_0_#000,7px_7px_0_white,8px_8px_0_#000]",
         !data.collapsed && !selected && "shadow-[1px_1px_0_rgba(0,0,0,0.05)]",
-        // Color tags override background
         data.colorTag === "ink" && "bg-ink text-white border-ink",
         data.colorTag === "amber" && "bg-amber-100 border-amber-200",
         data.colorTag === "sky" && "bg-sky-100 border-sky-200",

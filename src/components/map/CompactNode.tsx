@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { MessageSquare } from "lucide-react";
 import { Handle, Position, type NodeProps } from "reactflow";
 
+
 export type CompactNodeData = {
   title: string;
   description: string;

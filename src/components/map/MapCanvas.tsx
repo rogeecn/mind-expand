@@ -15,6 +15,8 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 
+import { AutoTextarea } from "@/components/common/AutoTextarea";
+import { Modal } from "@/components/common/Modal";
 import { CompactNode } from "@/components/map/CompactNode";
 import { MapToolbar } from "@/components/map/MapToolbar";
 import { NodeDetailsPanel } from "@/components/map/NodeDetailsPanel";
@@ -23,7 +25,7 @@ import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation";
 import { useMapData } from "@/hooks/useMapData";
 import { useTopic } from "@/hooks/useTopic";
 import { db, type EdgeRecord, type NodeRecord, type TopicStyle } from "@/lib/db";
-import { layoutWithD3Tree } from "@/lib/layout";
+import { calculateChildPositions, layoutWithD3Tree } from "@/lib/layout";
 
 import { expandNodeAction } from "@/app/actions/expand-node";
 import { downloadExport } from "@/components/map/ImportExport";
@@ -43,6 +45,11 @@ const defaultStyle: TopicStyle = {
 function mapNodeToFlow(
   node: NodeRecord,
   onSelect: (nodeId: string) => void,
+  actions: {
+    onCopy: (id: string) => void;
+    onEdit: (id: string) => void;
+    onAddChild: (id: string) => void;
+  },
   isLoading: boolean,
   isSelected: boolean,
   hasChildren: boolean,
@@ -62,7 +69,10 @@ function mapNodeToFlow(
         isLoading,
         hasChildren,
         hasChatHistory,
-        onSelect: () => onSelect(node.id)
+        onSelect: () => onSelect(node.id),
+        onCopy: () => actions.onCopy(node.id),
+        onEdit: () => actions.onEdit(node.id),
+        onAddChild: () => actions.onAddChild(node.id)
       }
 
   } satisfies Node;
@@ -402,6 +412,155 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [lastColor, setLastColor] = useState<NodeRecord["colorTag"]>(null);
 
+  const [editNodeId, setEditNodeId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", description: "" });
+
+  const [addChildParentId, setAddChildParentId] = useState<string | null>(null);
+  const [addChildForm, setAddChildForm] = useState({ title: "", description: "" });
+
+  const [contextMenu, setContextMenu] = useState<{ nodeId: string; x: number; y: number } | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
+  const reactFlowWrapperRef = useRef<HTMLDivElement | null>(null);
+
+  const handleCopySubtree = useCallback(async (rootId: string) => {
+    const root = nodes.find((n) => n.id === rootId);
+    if (!root) return;
+
+    const lines: string[] = [];
+    const build = (node: NodeRecord, depth: number) => {
+      const indent = "  ".repeat(depth);
+      lines.push(`${indent}- ${node.title}`);
+      if (node.description) {
+        lines.push(`${indent}  ${node.description.replace(/\n/g, `\n${indent}  `)}`);
+      }
+      const children = nodes
+        .filter((n) => n.parentId === node.id)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      children.forEach((child) => build(child, depth + 1));
+    };
+
+    build(root, 0);
+    const text = lines.join("\n");
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    setContextMenu(null);
+  }, [nodes]);
+
+  const handleEditNode = useCallback((nodeId: string) => {
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node) return;
+    setEditForm({ title: node.title, description: node.description });
+    setEditNodeId(nodeId);
+    setContextMenu(null);
+  }, [nodes]);
+
+  const submitEditNode = async () => {
+    if (!editNodeId) return;
+    await db.nodes.update(editNodeId, {
+      title: editForm.title,
+      description: editForm.description
+    });
+    setEditNodeId(null);
+  };
+
+  const handleAddChild = useCallback((parentId: string) => {
+    setAddChildForm({ title: "", description: "" });
+    setAddChildParentId(parentId);
+    setContextMenu(null);
+  }, []);
+
+  const handleOpenContextMenu = useCallback((event: React.MouseEvent, nodeId: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const bounds = reactFlowWrapperRef.current?.getBoundingClientRect();
+    setSelectedNodeId(nodeId);
+    setContextMenu({
+      nodeId,
+      x: bounds ? event.clientX - bounds.left : event.clientX,
+      y: bounds ? event.clientY - bounds.top : event.clientY
+    });
+  }, []);
+
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleGlobalClick = (event: MouseEvent) => {
+      if (contextMenuRef.current && contextMenuRef.current.contains(event.target as HTMLElement)) {
+        return;
+      }
+      setContextMenu(null);
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setContextMenu(null);
+      }
+    };
+    window.addEventListener("click", handleGlobalClick);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("click", handleGlobalClick);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [contextMenu]);
+
+  const submitAddChild = async () => {
+    if (!addChildParentId || !topic) return;
+    const parent = nodes.find((n) => n.id === addChildParentId);
+    if (!parent) return;
+
+    const siblings = nodes.filter((n) => n.parentId === parent.id);
+    const maxOrder = siblings.reduce((max, s) => Math.max(max, s.order ?? 0), -1);
+
+    const positions = calculateChildPositions(parent, siblings, 1);
+    const { x, y } = positions[0];
+
+    const newId = createId();
+    const newNode: NodeRecord = {
+      id: newId,
+      topicId: topic.id,
+      parentId: parent.id,
+      order: maxOrder + 1,
+      title: addChildForm.title,
+      description: addChildForm.description,
+      x,
+      y,
+      nodeStyle: styleConfig.nodeStyle,
+      colorTag: null,
+      collapsed: false,
+      createdAt: Date.now()
+    };
+
+    const newEdge: EdgeRecord = {
+      id: createId(),
+      topicId: topic.id,
+      source: parent.id,
+      target: newId,
+      edgeStyle: styleConfig.edgeStyle,
+      createdAt: Date.now()
+    };
+
+    await db.transaction("rw", db.nodes, db.edges, async () => {
+      await db.nodes.add(newNode);
+      await db.edges.add(newEdge);
+      if (parent.collapsed) {
+        await db.nodes.update(parent.id, { collapsed: false });
+      }
+    });
+
+    setAddChildParentId(null);
+    setSelectedNodeId(newId);
+  };
+
   // Keyboard Navigation
   useKeyboardNavigation({
     nodes,
@@ -443,13 +602,18 @@ export function MapCanvas({ topicId }: { topicId: string }) {
         return mapNodeToFlow(
           node,
           setSelectedNodeId,
+          {
+            onCopy: handleCopySubtree,
+            onEdit: handleEditNode,
+            onAddChild: handleAddChild
+          },
           pendingNodeIds.has(node.id),
           node.id === selectedNodeId,
           nodes.some((n) => n.parentId === node.id),
           hasChatHistory > 0
         );
       }),
-    [visibleNodes, setSelectedNodeId, pendingNodeIds, selectedNodeId, nodes, chatMessageCounts]
+    [visibleNodes, setSelectedNodeId, pendingNodeIds, selectedNodeId, nodes, chatMessageCounts, handleCopySubtree, handleEditNode, handleAddChild]
   );
 
   const selectedNode = selectedNodeId
@@ -478,7 +642,7 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   };
 
   return (
-    <div className="relative h-full w-full bg-paper">
+    <div ref={reactFlowWrapperRef} className="relative h-full w-full bg-paper">
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
@@ -493,7 +657,11 @@ export function MapCanvas({ topicId }: { topicId: string }) {
           setDefaultNodeView("chat");
           setSelectedNodeId(node.id);
         }}
-        onPaneClick={() => setSelectedNodeId(null)}
+        onNodeContextMenu={(event, node) => handleOpenContextMenu(event, node.id)}
+        onPaneClick={() => {
+          setSelectedNodeId(null);
+          setContextMenu(null);
+        }}
         nodesConnectable={false}
         nodesDraggable={false}
         fitView
@@ -522,6 +690,124 @@ export function MapCanvas({ topicId }: { topicId: string }) {
           initialViewMode={defaultNodeView}
         />
       )}
+
+      {contextMenu && (
+        <div
+          ref={contextMenuRef}
+          className="absolute z-50 w-48 border border-gray-200 bg-white shadow-xl"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={() => setContextMenu(null)}
+        >
+          <button
+            type="button"
+            onClick={() => handleCopySubtree(contextMenu.nodeId)}
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-gray-100"
+          >
+            复制 Markdown
+          </button>
+          <button
+            type="button"
+            onClick={() => handleEditNode(contextMenu.nodeId)}
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-gray-100"
+          >
+            修改节点
+          </button>
+          <button
+            type="button"
+            onClick={() => handleAddChild(contextMenu.nodeId)}
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-gray-100"
+          >
+            添加子节点
+          </button>
+        </div>
+      )}
+
+      <Modal
+        title="Edit Node"
+        isOpen={!!editNodeId}
+        onClose={() => setEditNodeId(null)}
+        maxWidth="max-w-xl"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <AutoTextarea
+              value={editForm.title}
+              onValueChange={(val) => setEditForm((prev) => ({ ...prev, title: val }))}
+              placeholder="Node title"
+              className="text-lg font-serif font-semibold"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <AutoTextarea
+              value={editForm.description}
+              onValueChange={(val) => setEditForm((prev) => ({ ...prev, description: val }))}
+              placeholder="Description (optional)"
+              className="text-sm text-gray-600 min-h-[100px]"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              onClick={() => setEditNodeId(null)}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-black"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={submitEditNode}
+              className="px-4 py-2 text-sm bg-black text-white rounded-sm hover:bg-gray-800"
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Add Child Node"
+        isOpen={!!addChildParentId}
+        onClose={() => setAddChildParentId(null)}
+        maxWidth="max-w-xl"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <AutoTextarea
+              value={addChildForm.title}
+              onValueChange={(val) => setAddChildForm((prev) => ({ ...prev, title: val }))}
+              placeholder="Child node title"
+              className="text-lg font-serif font-semibold"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <AutoTextarea
+              value={addChildForm.description}
+              onValueChange={(val) => setAddChildForm((prev) => ({ ...prev, description: val }))}
+              placeholder="Description (optional)"
+              className="text-sm text-gray-600 min-h-[100px]"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              onClick={() => setAddChildParentId(null)}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-black"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={submitAddChild}
+              className="px-4 py-2 text-sm bg-black text-white rounded-sm hover:bg-gray-800"
+              disabled={!addChildForm.title.trim()}
+            >
+              Add Node
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
