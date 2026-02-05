@@ -10,6 +10,7 @@ import { db, type ChatMessageRecord, type NodeRecord } from "@/lib/db";
 import { expandChatAction } from "@/app/actions/expand-chat";
 import { createId } from "@/lib/uuid";
 import { useModelSettings } from "@/hooks/useModelSettings";
+import { SettingsModal } from "@/components/map/SettingsModal";
 
 // ... StrategyType and PROMPT_TABS definitions remain the same ...
 type StrategyType =
@@ -93,7 +94,9 @@ export function NodeDetailsPanel({
 }: NodeDetailsPanelProps) {
   // Mode: 'summary' (default, compact) | 'chat' (expanded, interactive)
   const [viewMode, setViewMode] = useState<"summary" | "chat">(initialViewMode);
-  const { modelConfig } = useModelSettings();
+  const { state, modelConfig } = useModelSettings();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const hasApiToken = Boolean(state.apiToken?.trim());
   const [expanded, setExpanded] = useState(false); // Controls height in Chat mode
   const [activePrompt, setActivePrompt] = useState<StrategyType | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -239,6 +242,10 @@ export function NodeDetailsPanel({
 
   const handleSendPrompt = async (promptType: StrategyType) => {
     if (isLoading) return;
+    if (!hasApiToken) {
+      setIsSettingsOpen(true);
+      return;
+    }
     setActivePrompt(promptType);
     setIsLoading(true);
     setError(null);
@@ -266,6 +273,10 @@ export function NodeDetailsPanel({
     options?: { quoteId?: string; includeHistory?: boolean }
   ) => {
     if (isLoading) return;
+    if (!hasApiToken) {
+      setIsSettingsOpen(true);
+      return;
+    }
     const trimmed = (message ?? draft).trim();
     if (!trimmed) return;
     setActivePrompt(null);
@@ -321,68 +332,71 @@ export function NodeDetailsPanel({
 
   if (viewMode === "summary") {
     return (
-      <aside className="pointer-events-auto absolute bottom-8 left-1/2 z-30 w-[720px] max-w-[95vw] -translate-x-1/2 rounded-sm border border-gray-200 bg-white/95 px-6 py-5 shadow-xl backdrop-blur transition-all duration-300">
-        <div className="flex items-start justify-between gap-6">
-          <div className="flex-1 min-w-0">
-             <div className="max-h-32 overflow-y-auto pr-2 font-sans text-xs leading-relaxed text-gray-600 whitespace-pre-line">
-               {node.description || "无额外描述"}
-             </div>
+      <>
+        <aside className="pointer-events-auto absolute bottom-8 left-1/2 z-30 w-[720px] max-w-[95vw] -translate-x-1/2 rounded-sm border border-gray-200 bg-white/95 px-6 py-5 shadow-xl backdrop-blur transition-all duration-300">
+          <div className="flex items-start justify-between gap-6">
+            <div className="flex-1 min-w-0">
+               <div className="max-h-32 overflow-y-auto pr-2 font-sans text-xs leading-relaxed text-gray-600 whitespace-pre-line">
+                 {node.description || "无额外描述"}
+               </div>
+            </div>
+            <div className="flex flex-col gap-3 shrink-0 pt-1 border-l border-gray-100 pl-4">
+               <button
+                 onClick={onClose}
+                 className="flex items-center gap-2 text-gray-400 hover:text-red-600 transition group"
+                 title="关闭"
+               >
+                 <X className="w-4 h-4" />
+                 <span className="text-[10px] font-bold uppercase tracking-widest group-hover:underline">关闭</span>
+               </button>
+               <button
+                 onClick={() => setViewMode("chat")}
+                 className="flex items-center gap-2 text-ink hover:text-black transition group"
+                 title="进入研讨"
+               >
+                 <MessageSquare className="w-4 h-4" />
+                 <span className="text-[10px] font-bold uppercase tracking-widest group-hover:underline">研讨</span>
+               </button>
+            </div>
           </div>
-          <div className="flex flex-col gap-3 shrink-0 pt-1 border-l border-gray-100 pl-4">
-             <button
-               onClick={onClose}
-               className="flex items-center gap-2 text-gray-400 hover:text-red-600 transition group"
-               title="关闭"
-             >
-               <X className="w-4 h-4" />
-               <span className="text-[10px] font-bold uppercase tracking-widest group-hover:underline">关闭</span>
-             </button>
-             <button
-               onClick={() => setViewMode("chat")}
-               className="flex items-center gap-2 text-ink hover:text-black transition group"
-               title="进入研讨"
-             >
-               <MessageSquare className="w-4 h-4" />
-               <span className="text-[10px] font-bold uppercase tracking-widest group-hover:underline">研讨</span>
-             </button>
-          </div>
-        </div>
-      </aside>
+        </aside>
+        <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      </>
     );
   }
 
   // Chat Mode
   return (
-    <aside
-      className={clsx(
-        "pointer-events-auto absolute bottom-0 left-0 right-0 z-30 grid grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden border-t border-gray-900 bg-[#F9F9F7] transition-all duration-300 ease-in-out",
-        isFullscreen ? "top-0 h-full" : expanded ? "h-[75vh]" : "h-[45vh]"
-      )}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 bg-[#F9F9F7] px-6 py-3">
-        <div className="flex items-center gap-4 max-w-[70%]">
-          <h3 className="line-clamp-1 font-serif text-xl font-bold tracking-tight text-ink">
-            {node.title}
-          </h3>
-          <span className="h-4 w-px bg-gray-300"></span>
-          <span className="text-xs font-sans text-gray-500 uppercase tracking-wider">研讨模式</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setViewMode("summary")}
-            className="text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-black hover:underline"
-          >
-            返回摘要
-          </button>
-          <div className="h-4 w-px bg-gray-300 mx-1"></div>
-          <button
-            type="button"
-            onClick={() => setIsFullscreen((prev) => !prev)}
-            className="flex h-8 w-8 items-center justify-center text-gray-400 hover:text-black transition"
-            title={isFullscreen ? "退出全屏" : "全屏"}
-          >
+    <>
+      <aside
+        className={clsx(
+          "pointer-events-auto absolute bottom-0 left-0 right-0 z-30 grid grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden border-t border-gray-900 bg-[#F9F9F7] transition-all duration-300 ease-in-out",
+          isFullscreen ? "top-0 h-full" : expanded ? "h-[75vh]" : "h-[45vh]"
+        )}
+      >
+        <div className="flex items-center justify-between border-b border-gray-200 bg-[#F9F9F7] px-6 py-3">
+          <div className="flex items-center gap-4 max-w-[70%]">
+            <h3 className="line-clamp-1 font-serif text-xl font-bold tracking-tight text-ink">
+              {node.title}
+            </h3>
+            <span className="h-4 w-px bg-gray-300"></span>
+            <span className="text-xs font-sans text-gray-500 uppercase tracking-wider">研讨模式</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setViewMode("summary")}
+              className="text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-black hover:underline"
+            >
+              返回摘要
+            </button>
+            <div className="h-4 w-px bg-gray-300 mx-1"></div>
+            <button
+              type="button"
+              onClick={() => setIsFullscreen((prev) => !prev)}
+              className="flex h-8 w-8 items-center justify-center text-gray-400 hover:text-black transition"
+              title={isFullscreen ? "退出全屏" : "全屏"}
+            >
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </button>
           <button
@@ -571,7 +585,9 @@ export function NodeDetailsPanel({
           </div>
         </div>
       </div>
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </aside>
+    </>
   );
 }
 

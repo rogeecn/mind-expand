@@ -87,10 +87,13 @@ function mapEdgeToFlow(edge: EdgeRecord) {
   } satisfies Edge;
 }
 
-export function MapCanvas({ topicId }: { topicId: string }) {
+export function MapCanvas({ topicId, onRequireModelSettings }: { topicId: string; onRequireModelSettings: () => void }) {
+  const requireModelSettings = onRequireModelSettings;
+
   const { topic } = useTopic(topicId);
   const { nodes, edges, updateNodePosition, updateNodePositions } = useMapData(topicId);
-  const { modelConfig } = useModelSettings();
+  const { state, modelConfig } = useModelSettings();
+  const hasApiToken = Boolean(state.apiToken?.trim());
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [pendingNodeIds, setPendingNodeIds] = useState<Set<string>>(new Set());
   const [defaultNodeView, setDefaultNodeView] = useState<"summary" | "chat">("summary");
@@ -217,6 +220,13 @@ export function MapCanvas({ topicId }: { topicId: string }) {
   const handleExpandNode = useCallback(
     async (nodeId: string) => {
       if (pendingNodeIds.has(nodeId)) return;
+      if (!hasApiToken) {
+        setSelectedNodeId(nodeId);
+        setDefaultNodeView("summary");
+        setContextMenu(null);
+        requireModelSettings();
+        return;
+      }
       const parent = nodes.find((item) => item.id === nodeId);
       if (!parent || !topic) return;
       setPendingNodeIds((prev) => new Set(prev).add(nodeId));

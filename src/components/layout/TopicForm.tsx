@@ -22,9 +22,11 @@ export type TopicFormValues = {
 
 type TopicFormProps = {
   onSubmit: (values: TopicFormValues) => void;
+  onRequireModelSettings: () => void;
+  hasApiToken: boolean;
 };
 
-export function TopicForm({ onSubmit }: TopicFormProps) {
+export function TopicForm({ onSubmit, onRequireModelSettings, hasApiToken }: TopicFormProps) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const { modelConfig } = useModelSettings();
 
@@ -68,6 +70,10 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
   };
 
   const handleStartExploration = async () => {
+    if (!hasApiToken) {
+      onRequireModelSettings();
+      return;
+    }
     const keywords = getKeywords();
     if (keywords.length === 0) return;
 
@@ -107,6 +113,10 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
     goal?: string,
     goalDesc?: string
   ) => {
+    if (!hasApiToken) {
+      onRequireModelSettings();
+      return;
+    }
     setIsExtensionsLoading(true);
     setExtensions([]);
     try {
@@ -129,6 +139,10 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
   };
 
   const handleGenerateConstraints = async () => {
+    if (!hasApiToken) {
+      onRequireModelSettings();
+      return;
+    }
     if (selectedExtensionIds.length === 0) return;
 
     setIsRefineLoading(true);
@@ -165,6 +179,10 @@ export function TopicForm({ onSubmit }: TopicFormProps) {
   };
 
   const handleCreate = () => {
+    if (!hasApiToken) {
+      onRequireModelSettings();
+      return;
+    }
     setIsCreating(true);
     const focusPoints = suggestedFocusText.split("\n").map(s => s.trim()).filter(Boolean);
     const { role } = getEffectiveRole();

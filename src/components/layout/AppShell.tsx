@@ -6,6 +6,7 @@ import { TopicManagerModal } from "@/components/layout/TopicManagerModal";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { SettingsModal } from "@/components/map/SettingsModal";
 import { expandNodeAction } from "@/app/actions/expand-node";
+import { useModelSettings } from "@/hooks/useModelSettings";
 import { useTopic } from "@/hooks/useTopic";
 import { calculateChildPositions } from "@/lib/layout";
 import type { EdgeRecord, NodeRecord, TopicRecord } from "@/lib/db";
@@ -31,7 +32,15 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { state, modelConfig } = useModelSettings();
   const { topic } = useTopic(activeTopicId);
+
+  const hasApiToken = Boolean(state.apiToken?.trim());
+  const guardModelSettings = () => {
+    if (hasApiToken) return true;
+    setIsSettingsOpen(true);
+    return false;
+  };
 
   useEffect(() => {
     setActiveTopicId(topicId ?? null);
@@ -92,6 +101,7 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
     suggestedFocus,
     selectedExtensions
   }: TopicFormValues) => {
+    if (!guardModelSettings()) return;
     const trimmedDescription = description.trim();
     const now = Date.now();
 
@@ -138,7 +148,8 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
         topicDescription: newTopic.globalConstraints || newTopic.description,
         pathContext: [newTopic.rootKeyword],
         pathDetails: [{ title: newTopic.rootKeyword, description: newTopic.description || "" }],
-        existingChildren: []
+        existingChildren: [],
+        modelConfig
       });
 
       const positions = calculateChildPositions(rootNode, [], response.nodes.length);
@@ -182,12 +193,24 @@ export function AppShell({ mode, topicId = null }: AppShellProps) {
 
   const rightContent = useMemo(() => {
     if (isCreating) {
-      return <TopicForm onSubmit={handleCreateSubmit} />;
+      return (
+        <TopicForm
+          onSubmit={handleCreateSubmit}
+          onRequireModelSettings={() => setIsSettingsOpen(true)}
+          hasApiToken={hasApiToken}
+        />
+      );
     }
 
-    if (activeTopicId && topic && isReady) {
-      return <MapCanvas topicId={activeTopicId} />;
-    }
+      if (activeTopicId && topic && isReady) {
+        return (
+          <MapCanvas
+            topicId={activeTopicId}
+            onRequireModelSettings={() => setIsSettingsOpen(true)}
+          />
+        );
+      }
+
 
       return (
         <div className="flex h-full items-center justify-center px-10">
